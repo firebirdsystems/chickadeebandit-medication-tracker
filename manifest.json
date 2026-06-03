@@ -1,0 +1,29 @@
+{
+  "id": "medication-tracker",
+  "name": "Medications",
+  "version": "1.0.0",
+  "description": "Track daily medications for every family member. Check off doses as they're taken; adults can see all children's schedules and manage their own sharing.",
+  "entrypoint": "index.html",
+  "runtime": "static",
+  "category": "health",
+  "tags": ["health", "medication", "kids", "daily"],
+  "data_access": {
+    "reads": ["family.members"],
+    "writes": []
+  },
+  "permissions": {
+    "default_audience": "everyone",
+    "requires_approval": false
+  },
+  "storage": "db",
+  "nav": { "label": "Medications" },
+  "resource_limits": {
+    "max_db_bytes": 52428800
+  },
+  "icon": "💊",
+  "ai_access": {
+    "allowed": true,
+    "mode": "read",
+    "db_exports": ["medications_summary", "todays_doses"]
+  }
+}

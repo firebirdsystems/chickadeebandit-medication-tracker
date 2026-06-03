@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medications</title>
+  <base href="/run/medication-tracker/" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           var(--hub-bg, #f9fafb);
+      --card:         var(--hub-surface, #ffffff);
+      --border:       var(--hub-border, #e5e7eb);
+      --text:         var(--hub-text, #111827);
+      --muted:        var(--hub-text-muted, #6b7280);
+      --accent:       var(--hub-primary, #0891b2);
+      --accent-fg:    var(--hub-primary-fg, #ffffff);
+      --accent-hover: var(--hub-primary-hover, #0e7490);
+      --accent-light: #ecfeff;
+      --green:        #16a34a;
+      --green-light:  #dcfce7;
+      --red:          #dc2626;
+      --amber:        #d97706;
+      --amber-light:  #fef3c7;
+      --radius:       var(--hub-radius, 0.5rem);
+      --shadow:       0 1px 3px rgba(0,0,0,.07);
+    }
+
+    body {
+      font-family: var(--hub-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: var(--hub-font-size, 15px);
+      line-height: 1.5;
+    }
+
+    .app { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+    /* ── Header ──────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .header-left h1 { font-size: 1.25rem; font-weight: 700; }
+    .header-left .date-label { font-size: 0.82rem; color: var(--muted); margin-top: 1px; }
+
+    /* ── Tabs ────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 18px;
+    }
+    .tab {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      transition: all .15s;
+    }
+    .tab.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-icon {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 1rem;
+      line-height: 1;
+      transition: color .15s, background .15s;
+    }
+    .btn-icon:hover { color: var(--text); background: var(--border); }
+
+    /* ── Cards ───────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .card-header .member-name { font-weight: 600; font-size: 0.95rem; flex: 1; }
+    .card-header .badge-done {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--green);
+      background: var(--green-light);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── Medication rows ──────────────────────────────────── */
+    .med-row {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .med-row:last-child { border-bottom: none; }
+    .med-row-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .med-name { font-weight: 600; font-size: 0.95rem; }
+    .med-dosage { font-size: 0.8rem; color: var(--muted); }
+    .med-notes { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-style: italic; }
+    .med-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+    /* ── Slot pills ──────────────────────────────────────── */
+    .slots { display: flex; flex-wrap: wrap; gap: 6px; }
+    .slot-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      transition: all .15s;
+      line-height: 1.2;
+    }
+    .slot-pill:hover:not(.taken) {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .slot-pill.taken {
+      background: var(--green-light);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── Manage list ─────────────────────────────────────── */
+    .manage-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .manage-row:last-child { border-bottom: none; }
+    .manage-row .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .manage-info { flex: 1; min-width: 0; }
+    .manage-info .name { font-weight: 600; font-size: 0.9rem; }
+    .manage-info .meta { font-size: 0.78rem; color: var(--muted); }
+    .archived-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--border);
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+    .archived-row { opacity: .55; }
+
+    /* ── Modal ───────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 100;
+      padding: 0;
+    }
+    @media (min-width: 480px) {
+      .modal-backdrop { align-items: center; padding: 20px; }
+    }
+    .modal {
+      background: white;
+      border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    @media (min-width: 480px) {
+      .modal { border-radius: var(--radius); }
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+      background: white;
+      color: var(--text);
+    }
+    .form-group textarea { resize: vertical; min-height: 64px; }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+
+    .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toggle-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      background: transparent;
+      transition: all .15s;
+    }
+    .toggle-pill.on {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+    .modal-danger-zone {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .empty { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 0.9rem; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin: 18px 0 8px;
+    }
+    .section-title:first-child { margin-top: 0; }
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+    .show-archived-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .show-archived-toggle input { cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div id="root"><div class="loading">Loading…</div></div>
+</div>
+
+<script type="module">
+import { memberColor, initial, esc, isAdult, hubConfirm } from "/hub-sdk.js";
+import {
+  SLOT_LABELS, ALL_SLOTS, todayDate, parseJsonArray,
+  canViewMedication, canManageMedications, canEditMedication,
+  isDoseTaken, allDosesComplete, groupByMember,
+} from "./logic.js";
+
+const CONTEXT = window.__CONTEXT_URL ?? "";
+const DB      = window.__DB_URL      ?? "";
+const APP_ID  = window.__APP_ID      ?? "medication-tracker";
+const ME      = window.__CURRENT_MEMBER ?? null;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let members      = [];
+let medications  = []; // non-archived active meds
+let archivedMeds = []; // archived meds (loaded only in manage tab)
+let doses        = {}; // keyed by `${medId}__${date}__${slot}`
+let activeTab    = "today";
+let showArchived = false;
+let modalEl      = null;
+const TODAY      = todayDate();
+
+const DEMO_MEMBERS = [
+  { id: "parent-1", name: "Alex",   role: "adult" },
+  { id: "kid-1",    name: "Jordan", role: "child" },
+  { id: "kid-2",    name: "Casey",  role: "child" },
+];
+const DEMO_MEDS = [
+  { id: "m1", member_id: "parent-1", name: "Vitamin D",      dosage: "2000 IU",  notes: "",               schedule_slots: '["morning"]',            shared_with: "[]", archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m2", member_id: "kid-1",    name: "Allergy Tablet",  dosage: "10mg",     notes: "Take with food", schedule_slots: '["morning","evening"]',  shared_with: "[]", archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m3", member_id: "kid-2",    name: "Vitamin C",       dosage: "250mg",    notes: "",               schedule_slots: '["morning"]',            shared_with: "[]", archived: 0, created_at: "2026-01-01T00:00:00Z" },
+];
+
+// ── DB helper ──────────────────────────────────────────────────────────────
+async function db(sql, params = []) {
+  if (!DB) return { rows: [] };
+  const res = await fetch(DB, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  return res.json();
+}
+
+// ── Data loading ───────────────────────────────────────────────────────────
+async function loadMembers() {
+  if (!CONTEXT) { members = DEMO_MEMBERS; return; }
+  try {
+    const res  = await fetch(`${CONTEXT}?keys=family.members`);
+    members = ((await res.json())["family.members"]) ?? [];
+  } catch { members = []; }
+}
+
+async function loadMedications() {
+  if (!DB) {
+    medications  = DEMO_MEDS.filter(m => !m.archived);
+    archivedMeds = DEMO_MEDS.filter(m => m.archived);
+    return;
+  }
+  const [active, archived] = await Promise.all([
+    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at
+        FROM medications WHERE archived = 0 ORDER BY created_at ASC`),
+    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at
+        FROM medications WHERE archived = 1 ORDER BY created_at ASC`),
+  ]);
+  medications  = active.rows;
+  archivedMeds = archived.rows;
+}
+
+async function loadDoses() {
+  if (!DB) { doses = {}; return; }
+  const { rows } = await db(
+    `SELECT medication_id, dose_date, slot FROM doses WHERE dose_date = ?`,
+    [TODAY]
+  );
+  doses = {};
+  for (const r of rows) {
+    doses[`${r.medication_id}__${r.dose_date}__${r.slot}`] = true;
+  }
+}
+
+// ── Visibility helpers ─────────────────────────────────────────────────────
+function myMember() {
+  return ME ? members.find(m => m.id === ME.id) ?? ME : null;
+}
+
+function visibleMeds() {
+  const me = myMember();
+  return medications.filter(med => canViewMedication(med, me, members));
+}
+
+// ── Dose toggle ────────────────────────────────────────────────────────────
+window.toggleDose = async function(medId, slot) {
+  const key    = `${medId}__${TODAY}__${slot}`;
+  const taking = !(key in doses);
+
+  if (!taking) {
+    const ok = await hubConfirm({ message: "Mark as not taken?", confirmLabel: "Undo", destructive: false });
+    if (!ok) return;
+  }
+
+  if (taking) {
+    doses[key] = true;
+    render();
+    await db(
+      `INSERT INTO doses (medication_id, dose_date, slot, taken_at, logged_by)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (household_id, medication_id, dose_date, slot) DO NOTHING`,
+      [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
+    );
+  } else {
+    delete doses[key];
+    render();
+    await db(
+      `DELETE FROM doses WHERE medication_id = ? AND dose_date = ? AND slot = ?`,
+      [medId, TODAY, slot]
+    );
+  }
+};
+
+// ── Save medication ────────────────────────────────────────────────────────
+window.submitMedication = async function(existingId) {
+  const nameEl = document.getElementById("f-name");
+  const name   = nameEl?.value.trim() ?? "";
+  if (!name) { nameEl?.focus(); return; }
+
+  const memberId = document.getElementById("f-member")?.value ?? ME?.id ?? "";
+  const dosage   = document.getElementById("f-dosage")?.value.trim() ?? "";
+  const notes    = document.getElementById("f-notes")?.value.trim() ?? "";
+
+  const selectedSlots = ALL_SLOTS.filter(s =>
+    document.getElementById(`f-slot-${s}`)?.classList.contains("on")
+  );
+  if (!selectedSlots.length) {
+    alert("Select at least one schedule slot.");
+    return;
+  }
+
+  // collect shared_with only for the owner's own adult medication
+  const me = myMember();
+  const targetMember = members.find(m => m.id === memberId) ?? { role: "child" };
+  const isOwnAdultMed = isAdult(me) && isAdult(targetMember) && memberId === me?.id;
+  let sharedWith = [];
+  if (isOwnAdultMed) {
+    sharedWith = members
+      .filter(m => m.id !== me.id)
+      .filter(m => document.getElementById(`f-share-${m.id}`)?.classList.contains("on"))
+      .map(m => m.id);
+  }
+
+  const now = new Date().toISOString();
+
+  if (existingId) {
+    // Optimistic: update in place
+    const idx = medications.findIndex(m => m.id === existingId);
+    if (idx !== -1) {
+      medications[idx] = { ...medications[idx], name, dosage, notes,
+        schedule_slots: selectedSlots, shared_with: sharedWith };
+    }
+    closeModal();
+    render();
+    db(
+      `UPDATE medications SET name=?, dosage=?, notes=?, schedule_slots=?, shared_with=?
+       WHERE id=?`,
+      [name, dosage, notes, JSON.stringify(selectedSlots), JSON.stringify(sharedWith), existingId]
+    ).then(() => loadMedications().then(render));
+  } else {
+    // Optimistic: append new med
+    const id = crypto.randomUUID();
+    medications.push({ id, member_id: memberId, name, dosage, notes,
+      schedule_slots: selectedSlots, shared_with: sharedWith, archived: 0, created_at: now });
+    closeModal();
+    render();
+    db(
+      `INSERT INTO medications (id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      [id, memberId, name, dosage, notes, JSON.stringify(selectedSlots), JSON.stringify(sharedWith), now]
+    ).then(() => loadMedications().then(render));
+  }
+};
+
+// ── Archive / unarchive ────────────────────────────────────────────────────
+window.archiveMedication = async function(id, archive) {
+  const label = archive ? "archive" : "restore";
+  const ok = await hubConfirm({ message: `${archive ? "Archive" : "Restore"} this medication?`, confirmLabel: label.charAt(0).toUpperCase() + label.slice(1), destructive: archive });
+  if (!ok) return;
+
+  // Optimistic: move between medications / archivedMeds arrays
+  if (archive) {
+    const idx = medications.findIndex(m => m.id === id);
+    if (idx !== -1) { const [med] = medications.splice(idx, 1); med.archived = 1; archivedMeds.push(med); }
+  } else {
+    const idx = archivedMeds.findIndex(m => m.id === id);
+    if (idx !== -1) { const [med] = archivedMeds.splice(idx, 1); med.archived = 0; medications.push(med); }
+  }
+  closeModal();
+  render();
+
+  db(`UPDATE medications SET archived = ? WHERE id = ?`, [archive ? 1 : 0, id])
+    .then(() => loadMedications().then(render));
+};
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function openModal(html) {
+  closeModal();
+  modalEl = document.createElement("div");
+  modalEl.className = "modal-backdrop";
+  modalEl.innerHTML = `<div class="modal">${html}</div>`;
+  modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
+  document.body.appendChild(modalEl);
+}
+function closeModal() { modalEl?.remove(); modalEl = null; }
+window.closeModal = closeModal;
+
+window.openAddModal = function() {
+  const me = myMember();
+  const adultMembers = isAdult(me) ? members : [me].filter(Boolean);
+
+  const memberOptions = adultMembers
+    .map(m => `<option value="${esc(m.id)}" ${m.id === me?.id ? "selected" : ""}>${esc(m.name)}</option>`)
+    .join("");
+
+  const slotPills = ALL_SLOTS.map(s =>
+    `<button type="button" id="f-slot-${s}" class="toggle-pill on" onclick="this.classList.toggle('on')">${esc(SLOT_LABELS[s])}</button>`
+  ).join("");
+
+  const memberRow = adultMembers.length > 1
+    ? `<div class="form-group">
+        <label>For</label>
+        <select id="f-member" onchange="updateShareSection()">${memberOptions}</select>
+       </div>`
+    : `<input type="hidden" id="f-member" value="${esc(me?.id ?? "")}" />`;
+
+  openModal(`
+    <h3>Add Medication</h3>
+    ${memberRow}
+    <div class="form-group">
+      <label>Medication Name</label>
+      <input id="f-name" type="text" placeholder="e.g. Amoxicillin" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>Dosage <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-dosage" type="text" placeholder="e.g. 500mg" />
+    </div>
+    <div class="form-group">
+      <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <textarea id="f-notes" placeholder="e.g. Take with food"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Schedule</label>
+      <div class="toggle-group">${slotPills}</div>
+    </div>
+    <div id="share-section"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitMedication(null)">Add Medication</button>
+    </div>
+  `);
+
+  document.getElementById("f-name")?.focus();
+  updateShareSection();
+};
+
+window.updateShareSection = function() {
+  const me = myMember();
+  const memberId = document.getElementById("f-member")?.value ?? me?.id;
+  const targetMember = members.find(m => m.id === memberId) ?? { role: "child" };
+  const isOwnAdultMed = isAdult(me) && isAdult(targetMember) && memberId === me?.id;
+  const section = document.getElementById("share-section");
+  if (!section) return;
+  if (!isOwnAdultMed) { section.innerHTML = ""; return; }
+
+  const otherMembers = members.filter(m => m.id !== me?.id);
+  if (!otherMembers.length) { section.innerHTML = ""; return; }
+
+  const pills = otherMembers.map(m =>
+    `<button type="button" id="f-share-${esc(m.id)}" class="toggle-pill" onclick="this.classList.toggle('on')">${esc(m.name)}</button>`
+  ).join("");
+
+  section.innerHTML = `
+    <div class="form-group">
+      <label>Share with</label>
+      <div class="toggle-group">${pills}</div>
+    </div>
+  `;
+};
+
+window.openEditModal = function(id) {
+  const allMeds = [...medications, ...archivedMeds];
+  const med = allMeds.find(m => m.id === id);
+  if (!med) return;
+
+  const me = myMember();
+  const owner = members.find(m => m.id === med.member_id);
+  const isOwnAdultMed = isAdult(me) && isAdult(owner) && med.member_id === me?.id;
+  const currentSlots = parseJsonArray(med.schedule_slots);
+  const currentShared = parseJsonArray(med.shared_with);
+
+  const slotPills = ALL_SLOTS.map(s =>
+    `<button type="button" id="f-slot-${s}" class="toggle-pill ${currentSlots.includes(s) ? "on" : ""}" onclick="this.classList.toggle('on')">${esc(SLOT_LABELS[s])}</button>`
+  ).join("");
+
+  let shareHtml = "";
+  if (isOwnAdultMed) {
+    const others = members.filter(m => m.id !== me?.id);
+    if (others.length) {
+      const pills = others.map(m =>
+        `<button type="button" id="f-share-${esc(m.id)}" class="toggle-pill ${currentShared.includes(m.id) ? "on" : ""}" onclick="this.classList.toggle('on')">${esc(m.name)}</button>`
+      ).join("");
+      shareHtml = `<div class="form-group"><label>Share with</label><div class="toggle-group">${pills}</div></div>`;
+    }
+  }
+
+  const archiveBtn = !med.archived
+    ? `<button class="btn btn-ghost btn-sm" onclick="archiveMedication('${esc(id)}', true)">Archive</button>`
+    : `<button class="btn btn-ghost btn-sm" onclick="archiveMedication('${esc(id)}', false)">Restore</button>`;
+
+  const ownerName = owner ? esc(owner.name) : "Unknown";
+
+  openModal(`
+    <h3>Edit Medication</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">For <strong>${ownerName}</strong></p>
+    <input type="hidden" id="f-member" value="${esc(med.member_id)}" />
+    <div class="form-group">
+      <label>Medication Name</label>
+      <input id="f-name" type="text" value="${esc(med.name)}" />
+    </div>
+    <div class="form-group">
+      <label>Dosage <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-dosage" type="text" value="${esc(med.dosage)}" />
+    </div>
+    <div class="form-group">
+      <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <textarea id="f-notes">${esc(med.notes)}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Schedule</label>
+      <div class="toggle-group">${slotPills}</div>
+    </div>
+    ${shareHtml}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitMedication('${esc(id)}')">Save</button>
+    </div>
+    <div class="modal-danger-zone">
+      ${archiveBtn}
+    </div>
+  `);
+
+  document.getElementById("f-name")?.focus();
+};
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function avatarHtml(member, size = 34) {
+  const color = memberColor(member?.id ?? "", members);
+  const letter = initial(member?.name ?? "?");
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${color}">${esc(letter)}</div>`;
+}
+
+function slotPillsHtml(med) {
+  const slots = parseJsonArray(med.schedule_slots);
+  return slots.map(slot => {
+    const taken = isDoseTaken(doses, med.id, slot, TODAY);
+    const label = SLOT_LABELS[slot] ?? slot;
+    return `<button class="slot-pill${taken ? " taken" : ""}"
+              onclick="toggleDose('${esc(med.id)}','${esc(slot)}')"
+              title="${taken ? "Mark as not taken" : "Mark as taken"}">
+              ${taken ? "✓ " : ""}${esc(label)}
+            </button>`;
+  }).join("");
+}
+
+function medRowHtml(med, showEditBtn = false) {
+  const done = allDosesComplete(med, doses, TODAY);
+  const editBtn = showEditBtn
+    ? `<button class="btn-icon" onclick="openEditModal('${esc(med.id)}')" title="Edit">✎</button>`
+    : "";
+  return `
+    <div class="med-row${med.archived ? " archived-row" : ""}">
+      <div class="med-row-top">
+        <div>
+          <div class="med-name">${esc(med.name)}</div>
+          ${med.dosage ? `<div class="med-dosage">${esc(med.dosage)}</div>` : ""}
+          ${med.notes ? `<div class="med-notes">${esc(med.notes)}</div>` : ""}
+        </div>
+        <div class="med-actions">${editBtn}</div>
+      </div>
+      ${!med.archived ? `<div class="slots">${slotPillsHtml(med)}</div>` : ""}
+    </div>
+  `;
+}
+
+function memberSectionHtml(member, meds, title, canEdit) {
+  const done = meds.length > 0 && meds.every(m => allDosesComplete(m, doses, TODAY));
+  const doneBadge = done ? `<span class="badge-done">All done ✓</span>` : "";
+  const rows = meds.map(m => medRowHtml(m, canEdit)).join("");
+  return `
+    <div class="card">
+      <div class="card-header">
+        ${avatarHtml(member, 34)}
+        <span class="member-name">${esc(title)}</span>
+        ${doneBadge}
+      </div>
+      ${rows || `<div class="empty" style="padding:16px">No active medications</div>`}
+    </div>
+  `;
+}
+
+function renderToday(me, visible) {
+  if (!visible.length) {
+    return `<div class="empty">No medications to track today.<br>${isAdult(me) ? "Add one below." : "Ask a parent to add medications."}</div>`;
+  }
+
+  const byMember = groupByMember(visible);
+  let html = "";
+
+  // Own section first
+  const myMeds = byMember.get(me?.id) ?? [];
+  if (myMeds.length) {
+    const owner = members.find(m => m.id === me?.id) ?? me;
+    html += memberSectionHtml(owner, myMeds, "Your Medications", isAdult(me));
+  }
+
+  if (isAdult(me)) {
+    // Children's sections
+    const children = members.filter(m => m.role === "child");
+    for (const child of children) {
+      const childMeds = byMember.get(child.id) ?? [];
+      if (childMeds.length) {
+        html += memberSectionHtml(child, childMeds, child.name, true);
+      }
+    }
+
+    // Shared adult medications
+    const sharedSections = [];
+    for (const [memberId, meds] of byMember) {
+      if (memberId === me?.id) continue;
+      const owner = members.find(m => m.id === memberId);
+      if (!owner || !isAdult(owner)) continue; // already handled children above
+      sharedSections.push({ owner, meds });
+    }
+    if (sharedSections.length) {
+      html += `<p class="section-title">Shared with you</p>`;
+      for (const { owner, meds } of sharedSections) {
+        html += memberSectionHtml(owner, meds, owner.name, false);
+      }
+    }
+  }
+
+  return html;
+}
+
+function renderManage(me) {
+  if (!isAdult(me)) {
+    return `<div class="empty">Only adults can manage medications.</div>`;
+  }
+
+  const allVisible = [
+    ...medications.filter(med => canViewMedication(med, me, members)),
+    ...(showArchived ? archivedMeds.filter(med => canViewMedication(med, me, members)) : []),
+  ];
+
+  const rows = allVisible.map(med => {
+    const owner = members.find(m => m.id === med.member_id);
+    const canEdit = canEditMedication(med, me, members);
+    const slots = parseJsonArray(med.schedule_slots);
+    const slotLabels = slots.map(s => SLOT_LABELS[s] ?? s).join(", ");
+    const editBtn = canEdit
+      ? `<button class="btn-icon" onclick="openEditModal('${esc(med.id)}')" title="Edit">✎</button>`
+      : "";
+    return `
+      <div class="manage-row${med.archived ? " archived-row" : ""}">
+        ${avatarHtml(owner, 30)}
+        <div class="manage-info">
+          <div class="name">${esc(med.name)}${med.dosage ? ` <span style="font-weight:400;color:var(--muted)">${esc(med.dosage)}</span>` : ""}</div>
+          <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${med.archived ? " · <em>archived</em>" : ""}</div>
+        </div>
+        ${med.archived ? `<span class="archived-badge">Archived</span>` : ""}
+        ${editBtn}
+      </div>
+    `;
+  }).join("");
+
+  const addBtn = `<button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Add Medication</button>`;
+
+  return `
+    <div class="filter-bar">
+      ${addBtn}
+      <label class="show-archived-toggle">
+        <input type="checkbox" ${showArchived ? "checked" : ""} onchange="toggleShowArchived(this.checked)" />
+        Show archived
+      </label>
+    </div>
+    <div class="card">
+      ${rows || `<div class="empty">No medications yet. Add one above.</div>`}
+    </div>
+  `;
+}
+
+window.toggleShowArchived = function(val) {
+  showArchived = val;
+  render();
+};
+
+function render() {
+  const me = myMember();
+  const visible = visibleMeds();
+
+  const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  const manageTabVisible = isAdult(me);
+
+  const tabsHtml = manageTabVisible ? `
+    <div class="tabs">
+      <button class="tab ${activeTab === "today" ? "active" : ""}" onclick="switchTab('today')">Today</button>
+      <button class="tab ${activeTab === "manage" ? "active" : ""}" onclick="switchTab('manage')">Manage</button>
+    </div>
+  ` : "";
+
+  let bodyHtml = "";
+  if (activeTab === "today" || !manageTabVisible) {
+    bodyHtml = renderToday(me, visible);
+  } else {
+    bodyHtml = renderManage(me);
+  }
+
+  document.getElementById("root").innerHTML = `
+    <header>
+      <div class="header-left">
+        <h1>💊 Medications</h1>
+        <div class="date-label">${esc(dateLabel)}</div>
+      </div>
+    </header>
+    ${tabsHtml}
+    ${bodyHtml}
+  `;
+}
+
+window.switchTab = function(tab) {
+  activeTab = tab;
+  render();
+};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(async () => {
+  await Promise.all([loadMembers(), loadMedications(), loadDoses()]);
+  render();
+})();
+</script>
+</body>
+</html>
