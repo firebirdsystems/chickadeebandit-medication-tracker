@@ -391,9 +391,9 @@ async function loadMedications() {
   }
   const [active, archived] = await Promise.all([
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at
-        FROM medications WHERE archived = 0 ORDER BY created_at ASC`),
+        FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC`),
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at
-        FROM medications WHERE archived = 1 ORDER BY created_at ASC`),
+        FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
   medications  = active.rows;
   archivedMeds = archived.rows;
@@ -402,7 +402,7 @@ async function loadMedications() {
 async function loadDoses() {
   if (!DB) { doses = {}; return; }
   const { rows } = await db(
-    `SELECT medication_id, dose_date, slot FROM doses WHERE dose_date = ?`,
+    `SELECT medication_id, dose_date, slot FROM app_medication_tracker__doses WHERE dose_date = ?`,
     [TODAY]
   );
   doses = {};
@@ -435,16 +435,16 @@ window.toggleDose = async function(medId, slot) {
     doses[key] = true;
     render();
     await db(
-      `INSERT INTO doses (medication_id, dose_date, slot, taken_at, logged_by)
+      `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
        VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (household_id, medication_id, dose_date, slot) DO NOTHING`,
+       ON CONFLICT (medication_id, dose_date, slot) DO NOTHING`,
       [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
     );
   } else {
     delete doses[key];
     render();
     await db(
-      `DELETE FROM doses WHERE medication_id = ? AND dose_date = ? AND slot = ?`,
+      `DELETE FROM app_medication_tracker__doses WHERE medication_id = ? AND dose_date = ? AND slot = ?`,
       [medId, TODAY, slot]
     );
   }
@@ -492,7 +492,7 @@ window.submitMedication = async function(existingId) {
     closeModal();
     render();
     db(
-      `UPDATE medications SET name=?, dosage=?, notes=?, schedule_slots=?, shared_with=?
+      `UPDATE app_medication_tracker__medications SET name=?, dosage=?, notes=?, schedule_slots=?, shared_with=?
        WHERE id=?`,
       [name, dosage, notes, JSON.stringify(selectedSlots), JSON.stringify(sharedWith), existingId]
     ).then(() => loadMedications().then(render));
@@ -504,7 +504,7 @@ window.submitMedication = async function(existingId) {
     closeModal();
     render();
     db(
-      `INSERT INTO medications (id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at)
+      `INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, notes, schedule_slots, shared_with, archived, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
       [id, memberId, name, dosage, notes, JSON.stringify(selectedSlots), JSON.stringify(sharedWith), now]
     ).then(() => loadMedications().then(render));
@@ -528,7 +528,7 @@ window.archiveMedication = async function(id, archive) {
   closeModal();
   render();
 
-  db(`UPDATE medications SET archived = ? WHERE id = ?`, [archive ? 1 : 0, id])
+  db(`UPDATE app_medication_tracker__medications SET archived = ? WHERE id = ?`, [archive ? 1 : 0, id])
     .then(() => loadMedications().then(render));
 };
 
