@@ -10,6 +10,6 @@ SELECT
 FROM app_medication_tracker__doses d
 JOIN app_medication_tracker__medications m
   ON m.id = d.medication_id
-WHERE d.dose_date = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD')
+WHERE d.dose_date = date('now')
 ORDER BY d.taken_at DESC
 LIMIT 200

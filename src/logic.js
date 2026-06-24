@@ -37,21 +37,13 @@ export function parseJsonArray(value) {
  * Returns true if the current user can see a medication.
  *
  * Rules:
- *  - Always visible to the medication owner.
- *  - Adults can see all children's medications.
- *  - Adults can see another adult's medication only if that adult
- *    has listed them in shared_with.
- *  - Children can only see their own medications.
+ *  - Adults can see all medications (enforced server-side by adult_writable policy).
+ *  - Children can only see their own medications (enforced server-side via member_read_column).
  */
 export function canViewMedication(med, me, members) {
   if (!me) return false;
-  if (med.member_id === me.id) return true;
-  const { isAdult } = { isAdult: m => !!m && (m.role === "adult" || m.role === "admin") };
-  if (!isAdult(me)) return false;
-  const owner = members.find(m => m.id === med.member_id);
-  if (!isAdult(owner)) return true; // adult viewing a child's medication
-  const sharedWith = parseJsonArray(med.shared_with);
-  return sharedWith.includes(me.id);
+  const isAdult = m => !!m && (m.role === "adult" || m.role === "admin");
+  return isAdult(me) || med.member_id === me.id;
 }
 
 /**

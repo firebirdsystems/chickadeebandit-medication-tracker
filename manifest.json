@@ -16,6 +16,17 @@
     "requires_approval": false
   },
   "storage": "db",
+  "row_policies": {
+    "medications": {
+      "kind": "adult_writable",
+      "member_read_column": "member_id"
+    },
+    "doses": {
+      "kind": "owner_only",
+      "member_column": "logged_by",
+      "adults_bypass": true
+    }
+  },
   "nav": { "label": "Medications" },
   "resource_limits": {
     "max_db_bytes": 52428800
