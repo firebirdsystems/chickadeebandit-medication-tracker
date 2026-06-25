@@ -710,17 +710,17 @@ function renderToday(me, visible) {
       }
     }
 
-    // Shared adult medications
-    const sharedSections = [];
+    // Other adults' medications (adults can see the whole household)
+    const otherAdultSections = [];
     for (const [memberId, meds] of byMember) {
       if (memberId === me?.id) continue;
       const owner = members.find(m => m.id === memberId);
       if (!owner || !isAdult(owner)) continue; // already handled children above
-      sharedSections.push({ owner, meds });
+      otherAdultSections.push({ owner, meds });
     }
-    if (sharedSections.length) {
-      html += `<p class="section-title">Shared with you</p>`;
-      for (const { owner, meds } of sharedSections) {
+    if (otherAdultSections.length) {
+      html += `<p class="section-title">Other Adults</p>`;
+      for (const { owner, meds } of otherAdultSections) {
         html += memberSectionHtml(owner, meds, owner.name, false);
       }
     }

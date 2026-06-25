@@ -2,7 +2,7 @@
   "id": "medication-tracker",
   "name": "Medications",
   "version": "1.0.0",
-  "description": "Track daily medications for every family member. Check off doses as they're taken; adults can see all children's schedules and manage their own sharing.",
+  "description": "Track daily medications for every family member. Check off doses as they're taken; adults can see the whole household's schedules, children see only their own.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "health",

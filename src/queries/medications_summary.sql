@@ -5,7 +5,6 @@ SELECT
   m.dosage,
   m.notes,
   m.schedule_slots,
-  m.shared_with,
   m.archived,
   m.created_at
 FROM app_medication_tracker__medications m

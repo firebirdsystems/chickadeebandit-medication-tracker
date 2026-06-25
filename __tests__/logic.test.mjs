@@ -23,7 +23,6 @@ function med(overrides = {}) {
     dosage: "10mg",
     notes: "",
     schedule_slots: '["morning","evening"]',
-    shared_with: "[]",
     archived: 0,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -104,14 +103,9 @@ describe("canViewMedication", () => {
     expect(canViewMedication(m, MEMBERS[3], MEMBERS)).toBe(false); // kid-2
   });
 
-  it("adult cannot view another adult's medication when not shared", () => {
-    const m = med({ member_id: "adult-1", shared_with: "[]" });
-    expect(canViewMedication(m, MEMBERS[1], MEMBERS)).toBe(false); // adult-2
-  });
-
-  it("adult can view another adult's medication when shared with them", () => {
-    const m = med({ member_id: "adult-1", shared_with: '["adult-2"]' });
-    expect(canViewMedication(m, MEMBERS[1], MEMBERS)).toBe(true);
+  it("adult can view another adult's medication", () => {
+    const m = med({ member_id: "adult-1" });
+    expect(canViewMedication(m, MEMBERS[1], MEMBERS)).toBe(true); // adult-2
   });
 
   it("returns false when me is null", () => {

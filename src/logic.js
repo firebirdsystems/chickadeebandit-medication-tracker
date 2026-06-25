@@ -36,9 +36,9 @@ export function parseJsonArray(value) {
 /**
  * Returns true if the current user can see a medication.
  *
- * Rules:
- *  - Adults can see all medications (enforced server-side by adult_writable policy).
- *  - Children can only see their own medications (enforced server-side via member_read_column).
+ * Rules (mirrors the server-side `adult_writable` row policy):
+ *  - Adults can see every medication in the household.
+ *  - Children can only see their own medications.
  */
 export function canViewMedication(med, me, members) {
   if (!me) return false;
