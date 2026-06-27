@@ -330,7 +330,7 @@
 </div>
 
 <script type="module">
-import { memberColor, initial, esc, isAdult, hubConfirm } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm } from "/hub-sdk.js";
 import {
   SLOT_LABELS, ALL_SLOTS, todayDate, parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
@@ -464,7 +464,7 @@ window.submitMedication = async function(existingId) {
     document.getElementById(`f-slot-${s}`)?.classList.contains("on")
   );
   if (!selectedSlots.length) {
-    alert("Select at least one schedule slot.");
+    hubAlert("Select at least one schedule slot.");
     return;
   }
 
