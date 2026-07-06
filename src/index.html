@@ -571,7 +571,7 @@ window.openAddModal = function() {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitMedication(null)">Add Medication</button>
+      <button class="btn btn-primary" data-action="save-med">Add Medication</button>
     </div>
   `);
 
@@ -592,8 +592,8 @@ window.openEditModal = function(id) {
   ).join("");
 
   const archiveBtn = !med.archived
-    ? `<button class="btn btn-ghost btn-sm" onclick="archiveMedication('${esc(id)}', true)">Archive</button>`
-    : `<button class="btn btn-ghost btn-sm" onclick="archiveMedication('${esc(id)}', false)">Restore</button>`;
+    ? `<button class="btn btn-ghost btn-sm" data-action="archive-med" data-med-id="${esc(id)}" data-archived="true">Archive</button>`
+    : `<button class="btn btn-ghost btn-sm" data-action="archive-med" data-med-id="${esc(id)}" data-archived="false">Restore</button>`;
 
   const ownerName = owner ? esc(owner.name) : "Unknown";
 
@@ -619,7 +619,7 @@ window.openEditModal = function(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitMedication('${esc(id)}')">Save</button>
+      <button class="btn btn-primary" data-action="save-med" data-med-id="${esc(id)}">Save</button>
     </div>
     <div class="modal-danger-zone">
       ${archiveBtn}
@@ -642,7 +642,7 @@ function slotPillsHtml(med) {
     const taken = isDoseTaken(doses, med.id, slot, TODAY);
     const label = SLOT_LABELS[slot] ?? slot;
     return `<button class="slot-pill${taken ? " taken" : ""}"
-              onclick="toggleDose('${esc(med.id)}','${esc(slot)}')"
+              data-action="toggle-dose" data-med-id="${esc(med.id)}" data-slot="${esc(slot)}"
               title="${taken ? "Mark as not taken" : "Mark as taken"}">
               ${taken ? "✓ " : ""}${esc(label)}
             </button>`;
@@ -652,7 +652,7 @@ function slotPillsHtml(med) {
 function medRowHtml(med, showEditBtn = false) {
   const done = allDosesComplete(med, doses, TODAY);
   const editBtn = showEditBtn
-    ? `<button class="btn-icon" onclick="openEditModal('${esc(med.id)}')" title="Edit">✎</button>`
+    ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
     : "";
   return `
     <div class="med-row${med.archived ? " archived-row" : ""}">
@@ -745,7 +745,7 @@ function renderManage(me) {
     const slots = parseJsonArray(med.schedule_slots);
     const slotLabels = slots.map(s => SLOT_LABELS[s] ?? s).join(", ");
     const editBtn = canEdit
-      ? `<button class="btn-icon" onclick="openEditModal('${esc(med.id)}')" title="Edit">✎</button>`
+      ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
       : "";
     return `
       <div class="manage-row${med.archived ? " archived-row" : ""}">
@@ -819,6 +819,22 @@ window.switchTab = function(tab) {
   activeTab = tab;
   render();
 };
+
+// Delegated action handler. Medication ids come from the DB and are
+// attacker-controllable via raw /api/db, so they must not be interpolated into
+// inline onclick handlers (HTML-escaping is insufficient once the browser decodes
+// the attribute before the JS parser runs). Carry ids on data-* attributes.
+// Bound to document so it also covers buttons rendered inside modals.
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  switch (el.dataset.action) {
+    case "toggle-dose": window.toggleDose(el.dataset.medId, el.dataset.slot); break;
+    case "edit-med":    window.openEditModal(el.dataset.medId); break;
+    case "archive-med": window.archiveMedication(el.dataset.medId, el.dataset.archived === "true"); break;
+    case "save-med":    window.submitMedication(el.dataset.medId ?? null); break;
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
