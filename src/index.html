@@ -341,6 +341,14 @@ const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
 const ME      = window.__CURRENT_MEMBER ?? null;
+const IS_ADMIN  = window.__IS_ADMIN === true;
+const IS_ROSTER = window.__SPACE_KIND === "roster";
+// Who may manage medication regimens (add / edit / archive). In a roster (a care
+// coordinator's client list) that's the steward alone; every other member only
+// logs their own doses. Elsewhere any adult manages. Matches the hub medications
+// policy (adult_writable + member_read_column + steward_writes_only). Logging a
+// dose is never gated — that stays every member's own.
+const amManage = (m) => IS_ROSTER ? IS_ADMIN : isAdult(m);
 
 // ── State ──────────────────────────────────────────────────────────────────
 let members      = [];
@@ -533,7 +541,7 @@ window.closeModal = closeModal;
 
 window.openAddModal = function() {
   const me = myMember();
-  const adultMembers = isAdult(me) ? members : [me].filter(Boolean);
+  const adultMembers = amManage(me) ? members : [me].filter(Boolean);
 
   const memberOptions = adultMembers
     .map(m => `<option value="${esc(m.id)}" ${m.id === me?.id ? "selected" : ""}>${esc(m.name)}</option>`)
@@ -687,7 +695,7 @@ function memberSectionHtml(member, meds, title, canEdit) {
 
 function renderToday(me, visible) {
   if (!visible.length) {
-    return `<div class="empty">No medications to track today.<br>${isAdult(me) ? "Add one below." : "Ask a parent to add medications."}</div>`;
+    return `<div class="empty">No medications to track today.<br>${amManage(me) ? "Add one below." : "Ask a parent to add medications."}</div>`;
   }
 
   const byMember = groupByMember(visible);
@@ -697,10 +705,10 @@ function renderToday(me, visible) {
   const myMeds = byMember.get(me?.id) ?? [];
   if (myMeds.length) {
     const owner = members.find(m => m.id === me?.id) ?? me;
-    html += memberSectionHtml(owner, myMeds, "Your Medications", isAdult(me));
+    html += memberSectionHtml(owner, myMeds, "Your Medications", amManage(me));
   }
 
-  if (isAdult(me)) {
+  if (amManage(me)) {
     // Children's sections
     const children = members.filter(m => m.role === "child");
     for (const child of children) {
@@ -730,7 +738,7 @@ function renderToday(me, visible) {
 }
 
 function renderManage(me) {
-  if (!isAdult(me)) {
+  if (!amManage(me)) {
     return `<div class="empty">Only adults can manage medications.</div>`;
   }
 
@@ -787,7 +795,7 @@ function render() {
 
   const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-  const manageTabVisible = isAdult(me);
+  const manageTabVisible = amManage(me);
 
   const tabsHtml = manageTabVisible ? `
     <div class="tabs">
