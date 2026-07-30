@@ -4,7 +4,11 @@ import {
   SLOT_LABELS, ALL_SLOTS,
   todayDate, parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
-  isDoseTaken, allDosesComplete, groupByMember,
+  isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
+  allDosesComplete, groupByMember,
+  isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
+  medicationTimes, remindersEnabled, MAX_TIMES,
+  withArchivedState,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -227,5 +231,103 @@ describe("SLOT_LABELS", () => {
     for (const s of ALL_SLOTS) {
       expect(SLOT_LABELS[s]).toBeTruthy();
     }
+  });
+});
+
+// ── 1.1.0: clock-time schedules ───────────────────────────────────────────────
+
+describe("clock-time schedule", () => {
+  it("validates clock times", () => {
+    expect(isClockTime("08:00")).toBe(true);
+    expect(isClockTime("23:59")).toBe(true);
+    expect(isClockTime("8:00")).toBe(false);   // must be zero-padded
+    expect(isClockTime("24:00")).toBe(false);
+    expect(isClockTime("08:60")).toBe(false);
+    expect(isClockTime(800)).toBe(false);
+  });
+
+  it("formats times for display", () => {
+    expect(formatTime("08:00")).toBe("8:00 AM");
+    expect(formatTime("00:30")).toBe("12:30 AM");
+    expect(formatTime("12:00")).toBe("12:00 PM");
+    expect(formatTime("21:05")).toBe("9:05 PM");
+  });
+
+  it("normalizes times: valid only, de-duplicated, sorted, bounded", () => {
+    expect(normalizeTimes(["20:00", "08:00", "08:00", "nope"])).toEqual(["08:00", "20:00"]);
+    expect(normalizeTimes(null)).toEqual([]);
+    expect(normalizeTimes(Array.from({ length: 40 }, (_, i) =>
+      `${String(i % 24).padStart(2, "0")}:00`)).length).toBeLessThanOrEqual(MAX_TIMES);
+  });
+
+  it("reads reminder_times when present", () => {
+    expect(medicationTimes({ reminder_times: '["08:00","20:00"]' })).toEqual(["08:00", "20:00"]);
+  });
+
+  it("falls back to legacy schedule_slots so pre-migration rows still work", () => {
+    // A row that predates migration 003 must not look like it has no schedule.
+    expect(medicationTimes({ schedule_slots: '["morning","evening"]' })).toEqual(["08:00", "18:00"]);
+  });
+
+  it("prefers reminder_times over legacy slots", () => {
+    expect(medicationTimes({
+      reminder_times: '["09:30"]', schedule_slots: '["morning","evening"]',
+    })).toEqual(["09:30"]);
+  });
+
+  it("counts a legacy named-slot dose as taken for its mapped time", () => {
+    // Upgrading mid-day must not silently un-tick what was already taken.
+    const doses = { "m1__2026-06-01__morning": true };
+    expect(isDoseTaken(doses, "m1", "08:00", "2026-06-01")).toBe(true);
+    expect(isDoseTaken(doses, "m1", "20:00", "2026-06-01")).toBe(false);
+  });
+
+  it("returns the real legacy key so undo deletes the stored completion", () => {
+    const doses = { "m1__2026-06-01__morning": { loggedBy: "adult-1" } };
+    const key = existingDoseKey(doses, "m1", "08:00", "2026-06-01");
+    expect(key).toBe("m1__2026-06-01__morning");
+    expect(slotFromDoseKey(key, "2026-06-01")).toBe("morning");
+  });
+
+  it("prefers a new clock-time completion when both encodings exist", () => {
+    const doses = {
+      "m1__2026-06-01__morning": true,
+      "m1__2026-06-01__08:00": true,
+    };
+    expect(existingDoseKey(doses, "m1", "08:00", "2026-06-01"))
+      .toBe("m1__2026-06-01__08:00");
+  });
+
+  it("detects local-midnight rollover for a long-lived tab", () => {
+    expect(nextTodayKey("2026-06-01", new Date("2026-06-02T00:01:00")))
+      .toEqual({ today: "2026-06-02", changed: true });
+    expect(nextTodayKey("2026-06-02", new Date("2026-06-02T23:59:00")).changed).toBe(false);
+  });
+
+  it("normalizes recurrence days and explicit member recipients", () => {
+    expect(normalizeDaysMask(["5", "1", "5", "9", "nope"])).toBe("1,5");
+    expect(normalizeMemberIds([" member-2 ", "member-1", "member-2", ""]))
+      .toBe('["member-1","member-2"]');
+    expect(normalizeMemberIds([])).toBe("[]");
+  });
+
+  it("treats allDosesComplete over clock times", () => {
+    const med = { id: "m1", reminder_times: '["08:00","20:00"]' };
+    const partial = { "m1__2026-06-01__08:00": true };
+    expect(allDosesComplete(med, partial, "2026-06-01")).toBe(false);
+    expect(allDosesComplete(med, { ...partial, "m1__2026-06-01__20:00": true }, "2026-06-01")).toBe(true);
+  });
+
+  it("reads the per-row reminder off switch", () => {
+    expect(remindersEnabled({ reminders_on: 1 })).toBe(true);
+    expect(remindersEnabled({ reminders_on: 0 })).toBe(false);
+    expect(remindersEnabled({})).toBe(true); // absent column defaults to on
+  });
+
+  it("keeps reminders off across archive and restore", () => {
+    const archived = withArchivedState({ id: "m1", reminders_on: 1 }, true);
+    expect(archived).toMatchObject({ archived: 1, reminders_on: 0 });
+    expect(withArchivedState(archived, false))
+      .toMatchObject({ archived: 0, reminders_on: 0 });
   });
 });

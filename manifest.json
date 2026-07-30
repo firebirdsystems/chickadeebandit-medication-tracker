@@ -2,11 +2,11 @@
   "id": "medication-tracker",
   "name": "Medications",
   "version": "1.0.0",
-  "description": "Track daily medications for every family member. Check off doses as they're taken; adults can see the whole household's schedules, children see only their own.",
+  "description": "Track daily medications for every family member. Check off doses as they're taken, get a nudge at each scheduled time, and let a family member know when a dose is missed.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "health",
-  "tags": ["health", "medication", "kids", "daily"],
+  "tags": ["health", "medication", "kids", "daily", "reminders"],
   "data_access": {
     "reads": ["family.members"],
     "writes": []
@@ -17,6 +17,16 @@
   },
   "storage": "db",
   "contexts": ["household", "shared_space", "shared_space.roster"],
+  "required_capabilities": ["cron"],
+  "db_plaintext_columns": [
+    "slot",
+    "reminder_times",
+    "days_mask",
+    "started_on",
+    "ends_on",
+    "remind_member_ids",
+    "buddy_member_ids"
+  ],
   "row_policies": {
     "medications": {
       "kind": "adult_writable",
@@ -27,6 +37,36 @@
       "kind": "owner_only",
       "member_column": "logged_by",
       "adults_bypass": true
+    }
+  },
+  "schedule_reminders": {
+    "table": "medications",
+    "id_column": "id",
+    "title_column": "name",
+    "owner_column": "member_id",
+    "enabled_column": "reminders_on",
+    "subtitle_column": "dosage",
+    "times_column": "reminder_times",
+    "days_of_week_column": "days_mask",
+    "interval_days_column": "every_n_days",
+    "start_date_column": "started_on",
+    "end_date_column": "ends_on",
+    "completion": {
+      "table": "doses",
+      "parent_fk_column": "medication_id",
+      "date_column": "dose_date",
+      "slot_column": "slot",
+      "member_column": "logged_by"
+    },
+    "nudge": {
+      "at_minutes": 0,
+      "audience": "owner",
+      "member_column": "remind_member_ids"
+    },
+    "escalation": {
+      "grace_minutes": 30,
+      "audience": "adults",
+      "member_column": "buddy_member_ids"
     }
   },
   "nav": { "label": "Medications" },

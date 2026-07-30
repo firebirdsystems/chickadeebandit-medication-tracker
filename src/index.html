@@ -332,13 +332,18 @@
 <script type="module">
 import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm } from "/hub-sdk.js";
 import {
-  SLOT_LABELS, ALL_SLOTS, todayDate, parseJsonArray,
+  todayDate, parseJsonArray,
+  medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
+  formatTime, isClockTime, remindersEnabled, MAX_TIMES,
+  withArchivedState,
   canViewMedication, canManageMedications, canEditMedication,
-  isDoseTaken, allDosesComplete, groupByMember,
+  isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
+  allDosesComplete, groupByMember,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
+const REMINDER_STATUS = "api/reminders-schedule-status";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
 const ME      = window.__CURRENT_MEMBER ?? null;
 const IS_ADMIN  = window.__IS_ADMIN === true;
@@ -358,7 +363,8 @@ let doses        = {}; // keyed by `${medId}__${date}__${slot}`
 let activeTab    = "today";
 let showArchived = false;
 let modalEl      = null;
-const TODAY      = todayDate();
+let TODAY        = todayDate();
+let reminderStatus = null;
 
 const DEMO_MEMBERS = [
   { id: "parent-1", name: "Alex",   role: "adult" },
@@ -366,9 +372,9 @@ const DEMO_MEMBERS = [
   { id: "kid-2",    name: "Casey",  role: "child" },
 ];
 const DEMO_MEDS = [
-  { id: "m1", member_id: "parent-1", name: "Vitamin D",      dosage: "2000 IU",  notes: "",               schedule_slots: '["morning"]',           archived: 0, created_at: "2026-01-01T00:00:00Z" },
-  { id: "m2", member_id: "kid-1",    name: "Allergy Tablet",  dosage: "10mg",     notes: "Take with food", schedule_slots: '["morning","evening"]', archived: 0, created_at: "2026-01-01T00:00:00Z" },
-  { id: "m3", member_id: "kid-2",    name: "Vitamin C",       dosage: "250mg",    notes: "",               schedule_slots: '["morning"]',           archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m1", member_id: "parent-1", name: "Vitamin D",      dosage: "2000 IU",  notes: "",               reminder_times: '["08:00"]',          reminders_on: 1, archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m2", member_id: "kid-1",    name: "Allergy Tablet",  dosage: "10mg",     notes: "Take with food", reminder_times: '["08:00","18:00"]',  reminders_on: 1, archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m3", member_id: "kid-2",    name: "Vitamin C",       dosage: "250mg",    notes: "",               reminder_times: '["08:00"]',          reminders_on: 0, archived: 0, created_at: "2026-01-01T00:00:00Z" },
 ];
 
 // ── DB helper ──────────────────────────────────────────────────────────────
@@ -379,7 +385,11 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  return res.json();
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body?.error) {
+    throw new Error(body?.error || `Database request failed (${res.status})`);
+  }
+  return body;
 }
 
 // ── Data loading ───────────────────────────────────────────────────────────
@@ -398,9 +408,13 @@ async function loadMedications() {
     return;
   }
   const [active, archived] = await Promise.all([
-    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, archived, created_at
+    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
+               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+               archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC`),
-    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, archived, created_at
+    db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
+               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+               archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
   medications  = active.rows;
@@ -410,13 +424,38 @@ async function loadMedications() {
 async function loadDoses() {
   if (!DB) { doses = {}; return; }
   const { rows } = await db(
-    `SELECT medication_id, dose_date, slot FROM app_medication_tracker__doses WHERE dose_date = ?`,
+    `SELECT medication_id, dose_date, slot, logged_by FROM app_medication_tracker__doses WHERE dose_date = ?`,
     [TODAY]
   );
   doses = {};
   for (const r of rows) {
-    doses[`${r.medication_id}__${r.dose_date}__${r.slot}`] = true;
+    doses[`${r.medication_id}__${r.dose_date}__${r.slot}`] = { loggedBy: r.logged_by };
   }
+}
+
+async function loadReminderStatus() {
+  if (!DB) {
+    reminderStatus = {
+      entitled: true, escalation_entitled: false, unmonitored_row_ids: [],
+      app_monitored_count: medications.filter(remindersEnabled).length, cap: 10,
+    };
+    return;
+  }
+  try {
+    const res = await fetch(REMINDER_STATUS, { headers: { Accept: "application/json" } });
+    reminderStatus = res.ok ? await res.json() : null;
+  } catch {
+    reminderStatus = null;
+  }
+}
+
+async function refreshLocalDay(now = new Date()) {
+  const next = nextTodayKey(TODAY, now);
+  if (!next.changed) return false;
+  TODAY = next.today;
+  await loadDoses();
+  render();
+  return true;
 }
 
 // ── Visibility helpers ─────────────────────────────────────────────────────
@@ -429,10 +468,36 @@ function visibleMeds() {
   return medications.filter(med => canViewMedication(med, me, members));
 }
 
+function unmonitoredIds() {
+  return new Set(Array.isArray(reminderStatus?.unmonitored_row_ids)
+    ? reminderStatus.unmonitored_row_ids.map(String)
+    : []);
+}
+
+function reminderStatusHtml() {
+  if (!reminderStatus) {
+    return `<div class="empty" style="padding:10px">Reminder status is temporarily unavailable.</div>`;
+  }
+  const unmonitored = unmonitoredIds().size;
+  const escalation = reminderStatus.escalation_entitled
+    ? "Missed-dose escalation is active."
+    : "Basic reminders are active; missed-dose escalation requires Premium.";
+  const entitlement = reminderStatus.entitled
+    ? ""
+    : " This app’s scheduled reminders require the Premium cron capability.";
+  return `<div class="med-notes" style="margin:0 0 12px">
+    Monitoring ${Number(reminderStatus.app_monitored_count ?? 0)} of ${Number(reminderStatus.cap ?? 0)}
+    available reminder slots. ${esc(escalation + entitlement)}
+    ${unmonitored ? `<strong>${unmonitored} medication${unmonitored === 1 ? " is" : "s are"} not being monitored.</strong>` : ""}
+  </div>`;
+}
+
 // ── Dose toggle ────────────────────────────────────────────────────────────
 window.toggleDose = async function(medId, slot) {
-  const key    = `${medId}__${TODAY}__${slot}`;
-  const taking = !(key in doses);
+  await refreshLocalDay();
+  const storedKey = existingDoseKey(doses, medId, slot, TODAY);
+  const key = `${medId}__${TODAY}__${slot}`;
+  const taking = storedKey === null;
 
   if (!taking) {
     const ok = await hubConfirm({ message: "Mark as not taken?", confirmLabel: "Undo", destructive: false });
@@ -442,20 +507,147 @@ window.toggleDose = async function(medId, slot) {
   if (taking) {
     doses[key] = true;
     render();
-    await db(
-      `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (medication_id, dose_date, slot) DO NOTHING`,
-      [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
-    );
+    try {
+      await db(
+        `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (medication_id, dose_date, slot) DO NOTHING`,
+        [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
+      );
+      await loadDoses();
+    } catch (error) {
+      delete doses[key];
+      render();
+      hubAlert(`Could not mark this dose taken: ${error.message}`);
+    }
   } else {
-    delete doses[key];
+    const storedSlot = slotFromDoseKey(storedKey, TODAY);
+    const previous = doses[storedKey];
+    delete doses[storedKey];
     render();
-    await db(
-      `DELETE FROM app_medication_tracker__doses WHERE medication_id = ? AND dose_date = ? AND slot = ? AND logged_by = ?`,
-      [medId, TODAY, slot, ME?.id ?? "demo"]
-    );
+    try {
+      await db(
+        `DELETE FROM app_medication_tracker__doses
+          WHERE medication_id = ? AND dose_date = ? AND slot = ?`,
+        [medId, TODAY, storedSlot]
+      );
+      await loadDoses();
+    } catch (error) {
+      doses[storedKey] = previous;
+      render();
+      hubAlert(`Could not undo this dose: ${error.message}`);
+    }
   }
+  render();
+};
+
+
+// ── Schedule editor (clock times) ──────────────────────────────────────────
+// The schedule is the list of wall-clock times a medication is due. Each time
+// becomes an occurrence the hub nudges for, and each tick-off writes a dose row
+// keyed by that same time — which is how a nudge stops escalating.
+let editorTimes = [];
+
+function memberChecksHtml(cssClass, selectedRaw, ownerId, includeOwner = true) {
+  const selected = new Set(parseJsonArray(selectedRaw));
+  return members
+    .filter(member => member.role !== "guest" && (includeOwner || member.id !== ownerId))
+    .map(member => `<label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400">
+      <input type="checkbox" class="${cssClass}" value="${esc(member.id)}"
+             ${selected.has(member.id) ? "checked" : ""} />
+      ${esc(member.name)}
+    </label>`).join("");
+}
+
+function scheduleEditorHtml(times, remindersOn, med = {}) {
+  editorTimes = normalizeTimes(times);
+  const selectedDays = new Set(String(med.days_mask ?? "").split(",").map(Number).filter(Boolean));
+  const everyDay = selectedDays.size === 0;
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const dayChecks = dayNames.map((name, index) =>
+    `<label class="toggle-pill ${everyDay || selectedDays.has(index + 1) ? "on" : ""}"
+            style="display:inline-flex;align-items:center;gap:4px">
+       <input type="checkbox" class="f-day" value="${index + 1}"
+              ${everyDay || selectedDays.has(index + 1) ? "checked" : ""} />
+       ${name}
+     </label>`).join("");
+  return `
+    <div class="form-group">
+      <label>Schedule</label>
+      <div id="f-times" class="toggle-group" style="flex-wrap:wrap;gap:6px"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+        <input id="f-new-time" type="time" step="300" style="flex:0 0 auto" />
+        <button type="button" class="btn btn-ghost btn-sm" data-action="add-time">Add time</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Days</label>
+      <div class="toggle-group" style="flex-wrap:wrap;gap:6px">${dayChecks}</div>
+    </div>
+    <div class="form-group">
+      <label>Course dates <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <div style="display:flex;gap:8px">
+        <input id="f-started-on" type="date" value="${esc(med.started_on ?? "")}" aria-label="Starts on" />
+        <input id="f-ends-on" type="date" value="${esc(med.ends_on ?? "")}" aria-label="Ends on" />
+      </div>
+      <label>Repeat every N days</label>
+      <input id="f-every-n-days" type="number" min="1" max="366"
+             value="${esc(String(med.every_n_days ?? 1))}" />
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:500">
+        <input id="f-reminders-on" type="checkbox" ${remindersOn ? "checked" : ""} />
+        Send a reminder at each time
+      </label>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        Reminders during your quiet hours appear in your inbox but won't buzz.
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Reminder recipients <span style="font-weight:400;text-transform:none">(optional; defaults to the person taking it)</span></label>
+      <div class="toggle-group" style="display:grid;gap:4px">
+        ${memberChecksHtml("f-remind-member", med.remind_member_ids, med.member_id, true)}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Missed-dose escalation <span style="font-weight:400;text-transform:none">(Premium)</span></label>
+      <div class="toggle-group" style="display:grid;gap:4px">
+        ${memberChecksHtml("f-buddy-member", med.buddy_member_ids ?? "[]", med.member_id, true)
+          || `<span style="font-size:.82rem;color:var(--muted)">No eligible caregiver recipients.</span>`}
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        Leave everyone unchecked to disable missed-dose escalation for this medication.
+      </div>
+    </div>
+  `;
+}
+
+function renderEditorTimes() {
+  const host = document.getElementById("f-times");
+  if (!host) return;
+  host.innerHTML = editorTimes.length
+    ? editorTimes.map(t =>
+        `<button type="button" class="toggle-pill on" data-action="remove-time" data-time="${esc(t)}"
+                 title="Remove this time">${esc(formatTime(t))} ✕</button>`
+      ).join("")
+    : `<span style="font-size:.82rem;color:var(--muted)">No times yet — add one below.</span>`;
+}
+
+window.addEditorTime = function() {
+  const el = document.getElementById("f-new-time");
+  const value = el?.value ?? "";
+  if (!isClockTime(value)) { hubAlert("Pick a valid time."); return; }
+  if (editorTimes.length >= MAX_TIMES) {
+    hubAlert(`A medication can have at most ${MAX_TIMES} times a day.`);
+    return;
+  }
+  editorTimes = normalizeTimes([...editorTimes, value]);
+  renderEditorTimes();
+};
+
+window.removeEditorTime = function(time) {
+  editorTimes = editorTimes.filter(t => t !== time);
+  renderEditorTimes();
 };
 
 // ── Save medication ────────────────────────────────────────────────────────
@@ -468,41 +660,95 @@ window.submitMedication = async function(existingId) {
   const dosage   = document.getElementById("f-dosage")?.value.trim() ?? "";
   const notes    = document.getElementById("f-notes")?.value.trim() ?? "";
 
-  const selectedSlots = ALL_SLOTS.filter(s =>
-    document.getElementById(`f-slot-${s}`)?.classList.contains("on")
-  );
-  if (!selectedSlots.length) {
-    hubAlert("Select at least one schedule slot.");
+  const times = normalizeTimes(editorTimes);
+  if (!times.length) {
+    hubAlert("Add at least one time to the schedule.");
     return;
   }
+  const remindersOn = document.getElementById("f-reminders-on")?.checked ? 1 : 0;
+  const timesJson = JSON.stringify(times);
+  const selectedDays = [...document.querySelectorAll(".f-day:checked")].map(el => el.value);
+  const daysMask = selectedDays.length === 7 ? "" : normalizeDaysMask(selectedDays);
+  const startedOn = document.getElementById("f-started-on")?.value ?? "";
+  const endsOn = document.getElementById("f-ends-on")?.value ?? "";
+  const everyNDays = Number(document.getElementById("f-every-n-days")?.value || 1);
+  if (!Number.isInteger(everyNDays) || everyNDays < 1 || everyNDays > 366) {
+    hubAlert("Repeat interval must be between 1 and 366 days.");
+    return;
+  }
+  if (everyNDays > 1 && !startedOn) {
+    hubAlert("Choose a start date when repeating every N days.");
+    return;
+  }
+  if (startedOn && endsOn && endsOn < startedOn) {
+    hubAlert("The end date must be on or after the start date.");
+    return;
+  }
+  const remindMemberIds = normalizeMemberIds(
+    [...document.querySelectorAll(".f-remind-member:checked")].map(el => el.value),
+  );
+  const buddyMemberIds = normalizeMemberIds(
+    [...document.querySelectorAll(".f-buddy-member:checked")].map(el => el.value),
+  );
 
   const now = new Date().toISOString();
 
   if (existingId) {
     // Optimistic: update in place
     const idx = medications.findIndex(m => m.id === existingId);
+    const previous = idx === -1 ? null : { ...medications[idx] };
     if (idx !== -1) {
-      medications[idx] = { ...medications[idx], name, dosage, notes, schedule_slots: selectedSlots };
+      medications[idx] = { ...medications[idx], name, dosage, notes,
+        reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
+        every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
+        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds };
     }
     closeModal();
     render();
-    db(
-      `UPDATE app_medication_tracker__medications SET name=?, dosage=?, notes=?, schedule_slots=?
-       WHERE id=?`,
-      [name, dosage, notes, JSON.stringify(selectedSlots), existingId]
-    ).then(() => loadMedications().then(render));
+    try {
+      await db(
+        `UPDATE app_medication_tracker__medications
+            SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
+                days_mask=?, every_n_days=?, started_on=?, ends_on=?,
+                remind_member_ids=?, buddy_member_ids=?
+         WHERE id=?`,
+        [name, dosage, notes, timesJson, remindersOn, daysMask, everyNDays,
+          startedOn, endsOn, remindMemberIds, buddyMemberIds, existingId]
+      );
+      await Promise.all([loadMedications(), loadReminderStatus()]);
+      render();
+    } catch (error) {
+      if (idx !== -1 && previous) medications[idx] = previous;
+      render();
+      hubAlert(`Could not save this medication: ${error.message}`);
+    }
   } else {
     // Optimistic: append new med
     const id = crypto.randomUUID();
     medications.push({ id, member_id: memberId, name, dosage, notes,
-      schedule_slots: selectedSlots, archived: 0, created_at: now });
+      reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
+      every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
+      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
+      archived: 0, created_at: now });
     closeModal();
     render();
-    db(
-      `INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, notes, schedule_slots, archived, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-      [id, memberId, name, dosage, notes, JSON.stringify(selectedSlots), now]
-    ).then(() => loadMedications().then(render));
+    try {
+      await db(
+        `INSERT INTO app_medication_tracker__medications
+           (id, member_id, name, dosage, notes, reminder_times, reminders_on,
+            days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+            archived, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+        [id, memberId, name, dosage, notes, timesJson, remindersOn,
+          daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds, now]
+      );
+      await Promise.all([loadMedications(), loadReminderStatus()]);
+      render();
+    } catch (error) {
+      medications = medications.filter(m => m.id !== id);
+      render();
+      hubAlert(`Could not add this medication: ${error.message}`);
+    }
   }
 };
 
@@ -513,18 +759,41 @@ window.archiveMedication = async function(id, archive) {
   if (!ok) return;
 
   // Optimistic: move between medications / archivedMeds arrays
+  const previousMedications = medications.slice();
+  const previousArchived = archivedMeds.slice();
   if (archive) {
     const idx = medications.findIndex(m => m.id === id);
-    if (idx !== -1) { const [med] = medications.splice(idx, 1); med.archived = 1; archivedMeds.push(med); }
+    if (idx !== -1) {
+      const [med] = medications.splice(idx, 1);
+      archivedMeds.push(withArchivedState(med, true));
+    }
   } else {
     const idx = archivedMeds.findIndex(m => m.id === id);
-    if (idx !== -1) { const [med] = archivedMeds.splice(idx, 1); med.archived = 0; medications.push(med); }
+    if (idx !== -1) {
+      const [med] = archivedMeds.splice(idx, 1);
+      // Restoring does not silently restart a medication reminder. The editor
+      // lets the user make that choice explicitly after the row is restored.
+      medications.push(withArchivedState(med, false));
+    }
   }
   closeModal();
   render();
 
-  db(`UPDATE app_medication_tracker__medications SET archived = ? WHERE id = ?`, [archive ? 1 : 0, id])
-    .then(() => loadMedications().then(render));
+  try {
+    await db(
+      `UPDATE app_medication_tracker__medications
+          SET archived = ?, reminders_on = 0
+        WHERE id = ?`,
+      [archive ? 1 : 0, id],
+    );
+    await Promise.all([loadMedications(), loadReminderStatus()]);
+    render();
+  } catch (error) {
+    medications = previousMedications;
+    archivedMeds = previousArchived;
+    render();
+    hubAlert(`Could not ${label} this medication: ${error.message}`);
+  }
 };
 
 // ── Modals ─────────────────────────────────────────────────────────────────
@@ -547,9 +816,9 @@ window.openAddModal = function() {
     .map(m => `<option value="${esc(m.id)}" ${m.id === me?.id ? "selected" : ""}>${esc(m.name)}</option>`)
     .join("");
 
-  const slotPills = ALL_SLOTS.map(s =>
-    `<button type="button" id="f-slot-${s}" class="toggle-pill on" onclick="this.classList.toggle('on')">${esc(SLOT_LABELS[s])}</button>`
-  ).join("");
+  const scheduleEditor = scheduleEditorHtml(["08:00"], true, {
+    member_id: me?.id ?? "", every_n_days: 1, buddy_member_ids: "[]",
+  });
 
   const memberRow = adultMembers.length > 1
     ? `<div class="form-group">
@@ -573,16 +842,14 @@ window.openAddModal = function() {
       <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
       <textarea id="f-notes" placeholder="e.g. Take with food"></textarea>
     </div>
-    <div class="form-group">
-      <label>Schedule</label>
-      <div class="toggle-group">${slotPills}</div>
-    </div>
+    ${scheduleEditor}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" data-action="save-med">Add Medication</button>
     </div>
   `);
 
+  renderEditorTimes();
   document.getElementById("f-name")?.focus();
 };
 
@@ -593,11 +860,7 @@ window.openEditModal = function(id) {
 
   const me = myMember();
   const owner = members.find(m => m.id === med.member_id);
-  const currentSlots = parseJsonArray(med.schedule_slots);
-
-  const slotPills = ALL_SLOTS.map(s =>
-    `<button type="button" id="f-slot-${s}" class="toggle-pill ${currentSlots.includes(s) ? "on" : ""}" onclick="this.classList.toggle('on')">${esc(SLOT_LABELS[s])}</button>`
-  ).join("");
+  const scheduleEditor = scheduleEditorHtml(medicationTimes(med), remindersEnabled(med), med);
 
   const archiveBtn = !med.archived
     ? `<button class="btn btn-ghost btn-sm" data-action="archive-med" data-med-id="${esc(id)}" data-archived="true">Archive</button>`
@@ -621,10 +884,7 @@ window.openEditModal = function(id) {
       <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
       <textarea id="f-notes">${esc(med.notes)}</textarea>
     </div>
-    <div class="form-group">
-      <label>Schedule</label>
-      <div class="toggle-group">${slotPills}</div>
-    </div>
+    ${scheduleEditor}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" data-action="save-med" data-med-id="${esc(id)}">Save</button>
@@ -634,6 +894,7 @@ window.openEditModal = function(id) {
     </div>
   `);
 
+  renderEditorTimes();
   document.getElementById("f-name")?.focus();
 };
 
@@ -645,14 +906,15 @@ function avatarHtml(member, size = 34) {
 }
 
 function slotPillsHtml(med) {
-  const slots = parseJsonArray(med.schedule_slots);
-  return slots.map(slot => {
-    const taken = isDoseTaken(doses, med.id, slot, TODAY);
-    const label = SLOT_LABELS[slot] ?? slot;
+  // The dose "slot" IS the clock time from 1.1.0 — that is the key the hub's
+  // schedule_reminders completion lookup matches against, so a tick here is
+  // what stops the nudge escalating.
+  return medicationTimes(med).map(time => {
+    const taken = isDoseTaken(doses, med.id, time, TODAY);
     return `<button class="slot-pill${taken ? " taken" : ""}"
-              data-action="toggle-dose" data-med-id="${esc(med.id)}" data-slot="${esc(slot)}"
+              data-action="toggle-dose" data-med-id="${esc(med.id)}" data-slot="${esc(time)}"
               title="${taken ? "Mark as not taken" : "Mark as taken"}">
-              ${taken ? "✓ " : ""}${esc(label)}
+              ${taken ? "✓ " : ""}${esc(formatTime(time))}
             </button>`;
   }).join("");
 }
@@ -662,6 +924,7 @@ function medRowHtml(med, showEditBtn = false) {
   const editBtn = showEditBtn
     ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
     : "";
+  const notMonitored = remindersEnabled(med) && unmonitoredIds().has(String(med.id));
   return `
     <div class="med-row${med.archived ? " archived-row" : ""}">
       <div class="med-row-top">
@@ -669,6 +932,7 @@ function medRowHtml(med, showEditBtn = false) {
           <div class="med-name">${esc(med.name)}</div>
           ${med.dosage ? `<div class="med-dosage">${esc(med.dosage)}</div>` : ""}
           ${med.notes ? `<div class="med-notes">${esc(med.notes)}</div>` : ""}
+          ${notMonitored ? `<div class="med-notes"><strong>Reminder not monitored — turn another reminder off or upgrade.</strong></div>` : ""}
         </div>
         <div class="med-actions">${editBtn}</div>
       </div>
@@ -750,8 +1014,8 @@ function renderManage(me) {
   const rows = allVisible.map(med => {
     const owner = members.find(m => m.id === med.member_id);
     const canEdit = canEditMedication(med, me, members);
-    const slots = parseJsonArray(med.schedule_slots);
-    const slotLabels = slots.map(s => SLOT_LABELS[s] ?? s).join(", ");
+    const slotLabels = medicationTimes(med).map(formatTime).join(", ");
+    const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
     const editBtn = canEdit
       ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
       : "";
@@ -760,7 +1024,7 @@ function renderManage(me) {
         ${avatarHtml(owner, 30)}
         <div class="manage-info">
           <div class="name">${esc(med.name)}${med.dosage ? ` <span style="font-weight:400;color:var(--muted)">${esc(med.dosage)}</span>` : ""}</div>
-          <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${med.archived ? " · <em>archived</em>" : ""}</div>
+          <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${remindersOff}${med.archived ? " · <em>archived</em>" : ""}</div>
         </div>
         ${med.archived ? `<span class="archived-badge">Archived</span>` : ""}
         ${editBtn}
@@ -818,6 +1082,7 @@ function render() {
         <div class="date-label">${esc(dateLabel)}</div>
       </div>
     </header>
+    ${reminderStatusHtml()}
     ${tabsHtml}
     ${bodyHtml}
   `;
@@ -841,14 +1106,22 @@ document.addEventListener("click", (e) => {
     case "edit-med":    window.openEditModal(el.dataset.medId); break;
     case "archive-med": window.archiveMedication(el.dataset.medId, el.dataset.archived === "true"); break;
     case "save-med":    window.submitMedication(el.dataset.medId ?? null); break;
+    case "add-time":    window.addEditorTime(); break;
+    case "remove-time": window.removeEditorTime(el.dataset.time); break;
   }
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
   await Promise.all([loadMembers(), loadMedications(), loadDoses()]);
+  await loadReminderStatus();
   render();
 })();
+window.addEventListener("focus", () => { void refreshLocalDay(); void loadReminderStatus().then(render); });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) { void refreshLocalDay(); void loadReminderStatus().then(render); }
+});
+setInterval(() => { void refreshLocalDay(); }, 60_000);
 </script>
 </body>
 </html>
