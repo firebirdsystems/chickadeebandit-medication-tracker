@@ -29,14 +29,17 @@
   ],
   "row_policies": {
     "medications": {
-      "kind": "adult_writable",
-      "member_read_column": "member_id",
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": true,
+      "member_can_update": false,
       "steward_writes_only": true
     },
     "doses": {
-      "kind": "owner_only",
-      "member_column": "logged_by",
-      "adults_bypass": true,
+      "kind": "inherit_visibility",
+      "fk_column": "medication_id",
+      "parent_table": "medications",
+      "writer_column": "logged_by",
       "retain_days": {
         "default": 730,
         "timestamp_column": "dose_date",
@@ -90,6 +93,21 @@
     }
   },
   "nav": { "label": "Medications" },
+  "agenda": {
+    "kind": "reminder",
+    "label": "Medications",
+    "source": {
+      "kind": "sql",
+      "query": "SELECT m.id AS id, m.name AS title, NULLIF(m.dosage, '') AS subtitle, m.member_id AS member_id, CASE WHEN m.reminder_times LIKE '[\"__:__\"%' THEN substr(m.reminder_times, 3, 5) ELSE :today END AS when_at, CASE WHEN COUNT(d.dose_date) >= (CASE WHEN m.reminder_times LIKE '[%,%' THEN LENGTH(m.reminder_times) - LENGTH(REPLACE(m.reminder_times, ',', '')) + 1 ELSE 1 END) THEN 1 ELSE 0 END AS done FROM app_medication_tracker__medications m LEFT JOIN app_medication_tracker__doses d ON d.medication_id = m.id AND d.dose_date = :today WHERE m.archived = 0 AND m.reminders_on = 1 AND (m.started_on IS NULL OR m.started_on = '' OR m.started_on <= :today) AND (m.ends_on IS NULL OR m.ends_on = '' OR m.ends_on >= :today) AND (m.days_mask = '' OR (',' || m.days_mask || ',') LIKE ('%,' || CASE strftime('%w', :today) WHEN '0' THEN '7' ELSE strftime('%w', :today) END || ',%')) AND (m.every_n_days IS NULL OR m.started_on IS NULL OR m.started_on = '' OR (CAST(julianday(:today) - julianday(m.started_on) AS INTEGER) % m.every_n_days) = 0) GROUP BY m.id ORDER BY m.created_at LIMIT 20"
+    }
+  },
+  "glance": {
+    "source": {
+      "kind": "sql",
+      "query": "SELECT name AS title, NULLIF(dosage, '') AS subtitle, member_id AS member_id FROM app_medication_tracker__medications WHERE archived = 0 AND reminders_on = 1 AND (started_on IS NULL OR started_on = '' OR started_on <= :today) AND (ends_on IS NULL OR ends_on = '' OR ends_on >= :today) AND (days_mask = '' OR (',' || days_mask || ',') LIKE ('%,' || CASE strftime('%w', :today) WHEN '0' THEN '7' ELSE strftime('%w', :today) END || ',%')) AND (every_n_days IS NULL OR started_on IS NULL OR started_on = '' OR (CAST(julianday(:today) - julianday(started_on) AS INTEGER) % every_n_days) = 0) ORDER BY created_at LIMIT 3"
+    },
+    "display": { "template": "list", "title": "title", "subtitle": "subtitle", "owner": "member_id" }
+  },
   "resource_limits": {
     "max_db_bytes": 52428800
   },
