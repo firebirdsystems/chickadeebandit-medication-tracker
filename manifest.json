@@ -36,8 +36,28 @@
     "doses": {
       "kind": "owner_only",
       "member_column": "logged_by",
-      "adults_bypass": true
+      "adults_bypass": true,
+      "retain_days": {
+        "default": 730,
+        "timestamp_column": "dose_date",
+        "id_column": "rowid",
+        "override_key": "dose_history"
+      }
     }
+  },
+  "member_references": {
+    "medications": [
+      {
+        "column": "member_id",
+        "on_removed": "delete",
+        "dependent_tables": [
+          { "table": "doses", "foreign_key": "medication_id" }
+        ]
+      },
+      { "column": "remind_member_ids", "on_removed": "prune_list" },
+      { "column": "buddy_member_ids", "on_removed": "prune_list" }
+    ],
+    "doses": { "column": "logged_by", "on_removed": "keep" }
   },
   "schedule_reminders": {
     "table": "medications",

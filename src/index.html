@@ -379,7 +379,10 @@ const DEMO_MEDS = [
 
 // ── DB helper ──────────────────────────────────────────────────────────────
 async function db(sql, params = []) {
-  if (!DB) return { rows: [] };
+  // `changed: 1` in demo mode (no hub): callers that gate on the affected-row
+  // count must not read the absence of a database as "the write matched
+  // nothing".
+  if (!DB) return { rows: [], changed: 1 };
   const res = await fetch(DB, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -526,11 +529,22 @@ window.toggleDose = async function(medId, slot) {
     delete doses[storedKey];
     render();
     try {
-      await db(
+      // The row policy narrows this DELETE to rows the caller may write, so a
+      // child trying to undo a dose their parent logged matches nothing and
+      // returns 200 — the optimistic UI cleared the tick, the next load put it
+      // back, and the child could repeat that forever with no explanation.
+      // `changed` is what distinguishes "deleted" from "matched nothing".
+      const { changed } = await db(
         `DELETE FROM app_medication_tracker__doses
           WHERE medication_id = ? AND dose_date = ? AND slot = ?`,
         [medId, TODAY, storedSlot]
       );
+      if (!changed) {
+        doses[storedKey] = previous;
+        render();
+        hubAlert("This dose was logged by someone else, so only they (or an adult) can undo it.");
+        return;
+      }
       await loadDoses();
     } catch (error) {
       doses[storedKey] = previous;

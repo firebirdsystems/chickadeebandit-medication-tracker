@@ -10,6 +10,10 @@ SELECT
 FROM app_medication_tracker__doses d
 JOIN app_medication_tracker__medications m
   ON m.id = d.medication_id
-WHERE d.dose_date = date('now')
+-- `dose_date` is the household's LOCAL calendar date (the app derives it from
+-- the member's own clock). SQLite's date('now') is UTC, which names a different
+-- day for part of every day outside UTC, so this must use the :today token the
+-- hub binds to the household-local date.
+WHERE d.dose_date = :today
 ORDER BY d.taken_at DESC
 LIMIT 200

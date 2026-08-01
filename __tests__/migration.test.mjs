@@ -70,3 +70,28 @@ describe("migration 003 schedule reminders", () => {
       .toEqual([{ reminders_on: 1, buddy_member_ids: "[]" }]);
   });
 });
+
+// Dose history is the app's only time-driven growth: one row per medication
+// per day per slot, forever. A household on three daily medications writes
+// ~1,100 rows a year and nothing ever removed them. Retention is keyed on
+// `dose_date` because 002 already indexes it (the hub requires an index
+// leading on the timestamp column) and the runner truncates its cutoff to a
+// date for `_date`-suffixed columns. `doses` has a composite primary key and
+// no `id`, hence the documented "rowid" escape hatch; `override_key` lets an
+// admin lengthen or shorten the window per household.
+describe("dose retention", () => {
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf-8"),
+  );
+
+  it("expires dose history on an indexed, plaintext date column", () => {
+    expect(manifest.row_policies.doses.retain_days).toEqual({
+      default: 730,
+      timestamp_column: "dose_date",
+      id_column: "rowid",
+      override_key: "dose_history",
+    });
+    const indexes = readFileSync(new URL("../migrations/002_indexes.sql", import.meta.url), "utf-8");
+    expect(indexes).toMatch(/INDEX[^\n]*app_medication_tracker__doses \(dose_date\)/);
+  });
+});
