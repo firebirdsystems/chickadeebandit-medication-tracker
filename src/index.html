@@ -226,13 +226,18 @@
       background: white;
       border-radius: var(--radius) var(--radius) 0 0;
       width: 100%;
-      max-width: 480px;
+      max-width: 560px;
       padding: 24px;
       max-height: 90vh;
       overflow-y: auto;
+      /* Nothing in a form should ever scroll sideways — rows below wrap instead. */
+      overflow-x: hidden;
     }
     @media (min-width: 480px) {
       .modal { border-radius: var(--radius); }
+    }
+    @media (max-width: 479px) {
+      .modal { padding: 20px 16px; }
     }
     .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; }
     .form-group { margin-bottom: 14px; }
@@ -245,7 +250,10 @@
       text-transform: uppercase;
       letter-spacing: .04em;
     }
-    .form-group input,
+    /* Checkboxes/radios must be excluded — they live inside the toggle pills and
+       the recipient lists, where a 100%-wide, text-input-padded box blows the row
+       out past the modal. */
+    .form-group input:not([type="checkbox"]):not([type="radio"]),
     .form-group select,
     .form-group textarea {
       width: 100%;
@@ -260,9 +268,17 @@
       color: var(--text);
     }
     .form-group textarea { resize: vertical; min-height: 64px; }
-    .form-group input:focus,
+    /* Side-by-side fields. Date/time inputs carry a wide intrinsic min-width, so
+       without min-width:0 they refuse to shrink and push the modal sideways. */
+    .form-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .form-row > input,
+    .form-row > select { flex: 1 1 140px; min-width: 0; width: auto; }
+    .form-row > .btn { flex: 0 0 auto; }
+    .form-group input:not([type="checkbox"]):not([type="radio"]):focus,
     .form-group select:focus,
     .form-group textarea:focus { border-color: var(--accent); }
+    .form-group input[type="checkbox"],
+    .form-group input[type="radio"] { flex: 0 0 auto; accent-color: var(--accent); }
 
     .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .toggle-pill {
@@ -566,7 +582,7 @@ function memberChecksHtml(cssClass, selectedRaw, ownerId, includeOwner = true) {
   const selected = new Set(parseJsonArray(selectedRaw));
   return members
     .filter(member => member.role !== "guest" && (includeOwner || member.id !== ownerId))
-    .map(member => `<label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400">
+    .map(member => `<label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400;min-width:0;overflow-wrap:anywhere">
       <input type="checkbox" class="${cssClass}" value="${esc(member.id)}"
              ${selected.has(member.id) ? "checked" : ""} />
       ${esc(member.name)}
@@ -589,8 +605,8 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
     <div class="form-group">
       <label>Schedule</label>
       <div id="f-times" class="toggle-group" style="flex-wrap:wrap;gap:6px"></div>
-      <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
-        <input id="f-new-time" type="time" step="300" style="flex:0 0 auto" />
+      <div class="form-row" style="margin-top:8px">
+        <input id="f-new-time" type="time" step="300" style="flex:0 1 auto" />
         <button type="button" class="btn btn-ghost btn-sm" data-action="add-time">Add time</button>
       </div>
     </div>
@@ -600,11 +616,11 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
     </div>
     <div class="form-group">
       <label>Course dates <span style="font-weight:400;text-transform:none">(optional)</span></label>
-      <div style="display:flex;gap:8px">
+      <div class="form-row">
         <input id="f-started-on" type="date" value="${esc(med.started_on ?? "")}" aria-label="Starts on" />
         <input id="f-ends-on" type="date" value="${esc(med.ends_on ?? "")}" aria-label="Ends on" />
       </div>
-      <label>Repeat every N days</label>
+      <label style="margin-top:10px">Repeat every N days</label>
       <input id="f-every-n-days" type="number" min="1" max="366"
              value="${esc(String(med.every_n_days ?? 1))}" />
     </div>
