@@ -338,6 +338,13 @@
       user-select: none;
     }
     .show-archived-toggle input { cursor: pointer; }
+    .search-row { margin-bottom: 12px; }
+    .search-input {
+      width: 100%; border: 1.5px solid var(--border-mid, var(--border, #d1d5db));
+      border-radius: 8px; padding: 9px 11px; font: inherit;
+      background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
   </style>
 </head>
 <body>
@@ -346,7 +353,7 @@
 </div>
 
 <script type="module">
-import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm, searchMatch } from "/hub-sdk.js";
 import {
   todayDate, parseJsonArray,
   medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
@@ -354,7 +361,7 @@ import {
   withArchivedState,
   canViewMedication, canManageMedications, canEditMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
-  allDosesComplete, groupByMember,
+  allDosesComplete, groupByMember, searchableFields,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -377,6 +384,7 @@ let medications  = []; // non-archived active meds
 let archivedMeds = []; // archived meds (loaded only in manage tab)
 let doses        = {}; // keyed by `${medId}__${date}__${slot}`
 let activeTab    = "today";
+let searchQ = "";       // in-app search (see logic.js searchableFields)
 let showArchived = false;
 let modalEl      = null;
 let TODAY        = todayDate();
@@ -1041,7 +1049,11 @@ function renderManage(me) {
     ...(showArchived ? archivedMeds.filter(med => canViewMedication(med, me, members)) : []),
   ];
 
-  const rows = allVisible.map(med => {
+  const shown = searchQ
+    ? allVisible.filter(med => searchMatch(searchQ, searchableFields(med)))
+    : allVisible;
+
+  const rows = shown.map(med => {
     const owner = members.find(m => m.id === med.member_id);
     const canEdit = canEditMedication(med, me, members);
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
@@ -1072,11 +1084,22 @@ function renderManage(me) {
         Show archived
       </label>
     </div>
+    ${allVisible.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search medications…" aria-label="Search medications" value="${esc(searchQ)}" /></div>` : ""}
     <div class="card">
-      ${rows || `<div class="empty">No medications yet. Add one above.</div>`}
+      ${rows || `<div class="empty">${searchQ ? `Nothing matches "${esc(searchQ)}".` : "No medications yet. Add one above."}</div>`}
     </div>
   `;
 }
+
+// render() rewrites the whole view, so put the caret back after typing.
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "search") return;
+  searchQ = e.target.value;
+  const caret = e.target.selectionStart;
+  render();
+  const next = document.getElementById("search");
+  if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+});
 
 window.toggleShowArchived = function(val) {
   showArchived = val;

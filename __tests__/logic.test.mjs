@@ -8,7 +8,7 @@ import {
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   medicationTimes, remindersEnabled, MAX_TIMES,
-  withArchivedState,
+  withArchivedState, searchableFields,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -329,5 +329,13 @@ describe("clock-time schedule", () => {
     expect(archived).toMatchObject({ archived: 1, reminders_on: 0 });
     expect(withArchivedState(archived, false))
       .toMatchObject({ archived: 0, reminders_on: 0 });
+  });
+});
+
+describe("searchableFields", () => {
+  it("matches on dosage and notes, not just the medication name", () => {
+    const fields = searchableFields({ name: "Amoxicillin", dosage: "5mg", notes: "with food" });
+    expect(fields).toContain("5mg");
+    expect(fields).toContain("with food");
   });
 });

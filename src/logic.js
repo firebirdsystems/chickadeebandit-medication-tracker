@@ -222,3 +222,13 @@ export function groupByMember(medications) {
   }
   return map;
 }
+
+/**
+ * Fields the in-app search matches against (see hub-sdk `searchMatch`).
+ * Dosage and notes count as well as the name — a medication is often
+ * looked up by strength ("the 5mg one") or by what the note says about
+ * how to take it.
+ */
+export function searchableFields(item) {
+  return [item.name, item.dosage, item.notes];
+}
