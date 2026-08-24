@@ -369,6 +369,7 @@ const DB      = window.__DB_URL      ?? "";
 const REMINDER_STATUS = "api/reminders-schedule-status";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
 const ME      = window.__CURRENT_MEMBER ?? null;
+const EVENTS_URL = window.__EVENTS_URL ?? "/api/events";
 const IS_ADMIN  = window.__IS_ADMIN === true;
 const IS_ROSTER = window.__SPACE_KIND === "roster";
 // Who may manage medication regimens (add / edit / archive). In a roster (a care
@@ -417,6 +418,20 @@ async function db(sql, params = []) {
     throw new Error(body?.error || `Database request failed (${res.status})`);
   }
   return body;
+}
+
+/**
+ * Fire-and-forget publish. Payload is identifiers only — never the medication
+ * name. Medications are `owner_only` on member_id, so the drug someone takes is
+ * their business, while the event bus is household-wide.
+ */
+async function publishEvent(type, subjectId, payload = {}) {
+  if (!EVENTS_URL) return;
+  await fetch(EVENTS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, subject_id: subjectId, payload }),
+  }).catch(() => {});
 }
 
 // ── Data loading ───────────────────────────────────────────────────────────
@@ -542,6 +557,16 @@ window.toggleDose = async function(medId, slot) {
         [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
       );
       await loadDoses();
+      // Only the taken direction is announced: undoing a dose has no retraction
+      // on the bus, and a "not taken after all" event no consumer handles would
+      // be worse than silence.
+      await publishEvent("medication.dose_taken", medId, {
+        medication_id: medId,
+        member_id: medications.find(m => m.id === medId)?.member_id || undefined,
+        logged_by: ME?.id || undefined,
+        dose_date: TODAY,
+        slot,
+      });
     } catch (error) {
       delete doses[key];
       render();

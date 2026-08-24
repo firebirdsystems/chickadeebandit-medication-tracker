@@ -1,7 +1,7 @@
 {
   "id": "medication-tracker",
   "name": "Medications",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Track daily medications for every family member. Check off doses as they're taken, get a nudge at each scheduled time, and let a family member know when a dose is missed.",
   "entrypoint": "index.html",
   "runtime": "static",
@@ -89,9 +89,11 @@
     "escalation": {
       "grace_minutes": 30,
       "audience": "adults",
-      "member_column": "buddy_member_ids"
+      "member_column": "buddy_member_ids",
+      "event": "medication.dose_missed"
     }
   },
+  "publishes": ["medication.dose_taken"],
   "nav": { "label": "Medications" },
   "agenda": {
     "kind": "reminder",
