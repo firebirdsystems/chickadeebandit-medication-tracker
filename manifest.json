@@ -16,6 +16,11 @@
     "requires_approval": false
   },
   "storage": "db",
+  "preload": {
+    "active": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, archived, created_at FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC"},
+    "archived": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, archived, created_at FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC"},
+    "doses": {"sql": "SELECT medication_id, dose_date, slot, logged_by FROM app_medication_tracker__doses WHERE dose_date = ?", "params": [":today"]}
+  },
   "contexts": ["household", "shared_space", "shared_space.roster"],
   "required_capabilities": ["cron"],
   "db_plaintext_columns": [
