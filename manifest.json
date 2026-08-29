@@ -30,7 +30,8 @@
     "started_on",
     "ends_on",
     "remind_member_ids",
-    "buddy_member_ids"
+    "buddy_member_ids",
+    "schedule_slots"
   ],
   "row_policies": {
     "medications": {

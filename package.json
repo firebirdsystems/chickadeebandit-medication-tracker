@@ -1,6 +1,6 @@
 {
   "name": "chickadee-app-medication-tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Medication Tracker app for Chickadee Bandit",
   "type": "module",
   "scripts": {
