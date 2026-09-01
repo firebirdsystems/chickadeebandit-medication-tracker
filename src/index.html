@@ -353,9 +353,9 @@
 </div>
 
 <script type="module">
-import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm, searchMatch } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm, searchMatch, hubToday } from "/hub-sdk.js";
 import {
-  todayDate, parseJsonArray,
+  parseJsonArray,
   medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   formatTime, isClockTime, remindersEnabled, MAX_TIMES,
   withArchivedState,
@@ -388,7 +388,11 @@ let activeTab    = "today";
 let searchQ = "";       // in-app search (see logic.js searchableFields)
 let showArchived = false;
 let modalEl      = null;
-let TODAY        = todayDate();
+// The HOUSEHOLD's day, not the viewer device's. TODAY selects which day's doses
+// are shown AND is written into dose_date, so a device-local value would record
+// a dose under the wrong day for anyone awake near midnight or travelling — and
+// every server-side surface (glance, kiosk, cron) would disagree with the row.
+let TODAY        = hubToday();
 let reminderStatus = null;
 
 const DEMO_MEMBERS = [
@@ -492,7 +496,7 @@ async function loadReminderStatus() {
 }
 
 async function refreshLocalDay(now = new Date()) {
-  const next = nextTodayKey(TODAY, now);
+  const next = nextTodayKey(TODAY, hubToday(now));
   if (!next.changed) return false;
   TODAY = next.today;
   await loadDoses();

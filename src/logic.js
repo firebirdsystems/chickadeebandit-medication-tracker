@@ -107,16 +107,6 @@ export function withArchivedState(med, archived) {
 }
 
 /**
- * Returns today's date as a YYYY-MM-DD string (local time).
- */
-export function todayDate(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/**
  * Parses a JSON field that may be stored as a string or already be an array.
  * Returns an empty array on any error.
  */
@@ -189,11 +179,18 @@ export function slotFromDoseKey(key, date) {
   return index === -1 ? "" : String(key).slice(index + marker.length);
 }
 
-/** Recompute the app's local date and report whether an open tab crossed
- * midnight. Kept pure so rollover behavior is testable without a browser. */
-export function nextTodayKey(current, now = new Date()) {
-  const next = todayDate(now);
-  return { today: next, changed: next !== current };
+/**
+ * Has the calendar day rolled over under an open tab?
+ *
+ * Takes the new day as a STRING, not a Date, and deliberately does not compute
+ * it: "today" for this app is the HOUSEHOLD's day (the caller passes
+ * `hubToday(now)`), and logic.js stays free of the SDK so it remains testable
+ * in Node. Deriving the day from a Date in here is what made every dose row
+ * follow the VIEWER DEVICE's clock — a dose taken at 11pm in one timezone and
+ * read from another named two different days, with nothing to reconcile them.
+ */
+export function nextTodayKey(current, today) {
+  return { today, changed: today !== current };
 }
 
 /** Reverse of SLOT_TIMES, for reading dose rows written before 1.1.0. */

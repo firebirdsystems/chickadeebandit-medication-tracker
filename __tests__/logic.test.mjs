@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   initial, memberColor, AVATAR_COLORS,
   SLOT_LABELS, ALL_SLOTS,
-  todayDate, parseJsonArray,
+  parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember,
@@ -57,14 +57,16 @@ describe("memberColor", () => {
   });
 });
 
-// ── todayDate() ───────────────────────────────────────────────────────────────
-describe("todayDate", () => {
-  it("returns a YYYY-MM-DD string", () => {
-    expect(todayDate(new Date("2026-06-01T10:00:00"))).toBe("2026-06-01");
-  });
-
-  it("pads month and day", () => {
-    expect(todayDate(new Date("2026-01-05T00:00:00"))).toBe("2026-01-05");
+// todayDate() was retired: it built the day from the VIEWER DEVICE's clock,
+// while every dose row and every server-side surface is on the HOUSEHOLD's
+// calendar. index.html now takes the day from the SDK's hubToday().
+describe("nextTodayKey takes a day string, never a Date", () => {
+  it("does not accept a Date — that is how the device clock crept back in", () => {
+    const d = new Date("2026-06-02T00:01:00");
+    // A Date would compare unequal to the stored string forever, so the app
+    // would think the day rolled over on every tick.
+    expect(nextTodayKey("2026-06-02", d).today).not.toBe("2026-06-02");
+    expect(nextTodayKey("2026-06-02", "2026-06-02").changed).toBe(false);
   });
 });
 
@@ -299,9 +301,9 @@ describe("clock-time schedule", () => {
   });
 
   it("detects local-midnight rollover for a long-lived tab", () => {
-    expect(nextTodayKey("2026-06-01", new Date("2026-06-02T00:01:00")))
+    expect(nextTodayKey("2026-06-01", "2026-06-02"))
       .toEqual({ today: "2026-06-02", changed: true });
-    expect(nextTodayKey("2026-06-02", new Date("2026-06-02T23:59:00")).changed).toBe(false);
+    expect(nextTodayKey("2026-06-02", "2026-06-02").changed).toBe(false);
   });
 
   it("normalizes recurrence days and explicit member recipients", () => {
