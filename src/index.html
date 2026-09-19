@@ -17,9 +17,9 @@
       --accent:       var(--hub-primary, #0891b2);
       --accent-fg:    var(--hub-primary-fg, #ffffff);
       --accent-hover: var(--hub-primary-hover, #0e7490);
-      --accent-light: #ecfeff;
-      --green:        #16a34a;
-      --green-light:  #dcfce7;
+      --accent-light: var(--hub-tint-info, #ecfeff);
+      --green:        var(--hub-tint-success-fg, #16a34a);
+      --green-light:  var(--hub-tint-success, #dcfce7);
       --red:          #dc2626;
       --amber:        #d97706;
       --amber-light:  #fef3c7;
@@ -69,7 +69,7 @@
       background: transparent;
       transition: all .15s;
     }
-    .tab.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 
     /* ── Buttons ─────────────────────────────────────────── */
     .btn {
@@ -85,7 +85,7 @@
       transition: opacity .15s;
     }
     .btn:disabled { opacity: .5; cursor: default; }
-    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary { background: var(--accent); color: var(--accent-fg); }
     .btn-primary:hover:not(:disabled) { opacity: .88; }
     .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
     .btn-ghost:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
@@ -223,7 +223,7 @@
       .modal-backdrop { align-items: center; padding: 20px; }
     }
     .modal {
-      background: white;
+      background: var(--card);
       border-radius: var(--radius) var(--radius) 0 0;
       width: 100%;
       max-width: 560px;
@@ -264,7 +264,7 @@
       font-family: inherit;
       outline: none;
       transition: border-color .15s;
-      background: white;
+      background: var(--card);
       color: var(--text);
     }
     .form-group textarea { resize: vertical; min-height: 64px; }
