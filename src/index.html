@@ -527,10 +527,10 @@ function reminderStatusHtml() {
   const unmonitored = unmonitoredIds().size;
   const escalation = reminderStatus.escalation_entitled
     ? "Missed-dose escalation is active."
-    : "Basic reminders are active; missed-dose escalation requires Premium.";
+    : "Basic reminders are active; missed-dose escalation resumes when the household's plan is active.";
   const entitlement = reminderStatus.entitled
     ? ""
-    : " This app’s scheduled reminders require the Premium cron capability.";
+    : " This app’s scheduled reminders are paused while the household’s plan is inactive.";
   return `<div class="med-notes" style="margin:0 0 12px">
     Monitoring ${Number(reminderStatus.app_monitored_count ?? 0)} of ${Number(reminderStatus.cap ?? 0)}
     available reminder slots. ${esc(escalation + entitlement)}
@@ -677,7 +677,7 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
       </div>
     </div>
     <div class="form-group">
-      <label>Missed-dose escalation <span style="font-weight:400;text-transform:none">(Premium)</span></label>
+      <label>Missed-dose escalation</label>
       <div class="toggle-group" style="display:grid;gap:4px">
         ${memberChecksHtml("f-buddy-member", med.buddy_member_ids ?? "[]", med.member_id, true)
           || `<span style="font-size:.82rem;color:var(--muted)">No eligible caregiver recipients.</span>`}
