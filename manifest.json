@@ -39,6 +39,7 @@
       "member_column": "member_id",
       "adults_bypass": true,
       "member_can_update": false,
+      "member_can_insert": false,
       "steward_writes_only": true
     },
     "doses": {

@@ -1,0 +1,314 @@
+{
+  "scenarios": [
+    {
+      "name": "a child sees only their own medications and dose history; an adult sees the whole family's",
+      "members": {
+        "parent": "adult",
+        "kidA": "child",
+        "kidB": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, created_at) VALUES ('m_a', ?, 'Inhaler', '2 puffs', '[\"08:00\"]', '2026-01-01T00:00:00Z'), ('m_b', ?, 'ADHD med', '10mg', '[\"08:00\"]', '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{kidA}}",
+            "{{kidB}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m_a', '2026-01-02', '08:00', '2026-01-02T08:05:00Z', ?), ('m_b', '2026-01-02', '08:00', '2026-01-02T08:06:00Z', ?)",
+          "params": [
+            "{{kidA}}",
+            "{{parent}}"
+          ]
+        },
+        {
+          "action": "db",
+          "as": "kidA",
+          "sql": "SELECT id, name FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m_a",
+                "name": "Inhaler"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kidA",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m_a"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kidA",
+          "sql": "SELECT m.id FROM app_medication_tracker__medications m JOIN app_medication_tracker__doses d ON d.medication_id = m.id WHERE m.id = 'm_b'",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 2
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "only an adult can change or remove a medication; a child cannot edit even their own",
+      "members": {
+        "parent": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, created_at) VALUES ('m1', ?, 'Amoxicillin', '250mg', '[\"08:00\",\"20:00\"]', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = 'm1'",
+          "expect": {
+            "status": 403,
+            "errorIncludes": "only be modified by adults"
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "DELETE FROM app_medication_tracker__medications WHERE id = 'm1'",
+          "expect": {
+            "status": 403,
+            "errorIncludes": "only be modified by adults"
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT id, archived FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m1",
+                "archived": 0
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = 'm1'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id, archived FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m1",
+                "archived": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "a child can tick off a dose of their own medication but not a sibling's",
+      "members": {
+        "parent": "adult",
+        "kidA": "child",
+        "kidB": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, reminder_times, created_at) VALUES ('m_a', ?, 'Vitamin', '[\"08:00\"]', '2026-01-01T00:00:00Z'), ('m_b', ?, 'Allergy', '[\"08:00\"]', '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{kidA}}",
+            "{{kidB}}"
+          ]
+        },
+        {
+          "action": "db",
+          "as": "kidA",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m_a', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{kidA}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "kidA",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m_b', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{kidA}}"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT medication_id, logged_by FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m_a"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "medications_summary lists active medications only, scoped to what the caller may see",
+      "members": {
+        "parent": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, reminder_times, archived, created_at) VALUES ('m1', ?, 'Inhaler', '[\"08:00\"]', 0, '2026-01-01T00:00:00Z'), ('m2', ?, 'Old antibiotic', '[\"08:00\"]', 1, '2026-01-01T00:00:01Z'), ('m3', ?, 'Blood pressure', '[\"08:00\"]', 0, '2026-01-01T00:00:02Z')",
+          "params": [
+            "{{kid}}",
+            "{{kid}}",
+            "{{parent}}"
+          ]
+        },
+        {
+          "action": "named",
+          "as": "parent",
+          "kind": "query",
+          "name": "medications_summary",
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m1",
+                "name": "Inhaler"
+              },
+              {
+                "id": "m3"
+              }
+            ]
+          }
+        },
+        {
+          "action": "named",
+          "as": "kid",
+          "kind": "query",
+          "name": "medications_summary",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "only an adult can add a medication; a child cannot add one even for themselves",
+      "members": {
+        "parent": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, created_at) VALUES ('m-kid', ?, 'Candy', '1', '[]', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "requires an adult"
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, created_at) VALUES ('m-parent', ?, 'Amoxicillin', '250mg', '[]', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-parent"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
