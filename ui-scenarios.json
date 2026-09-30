@@ -1,0 +1,67 @@
+{
+  "scenarios": [
+    {
+      "name": "an adult edits their own and a child's medication but never another adult's; a child gets no edit or manage controls",
+      "members": {
+        "owner": "admin",
+        "parent": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('ui-own', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z'), ('ui-kid', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:01Z'), ('ui-adm', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:02Z')",
+          "params": [
+            "{{parent}}", "Vitamin D", "2000 IU", "[\"08:00\"]",
+            "{{kid}}", "Allergy Tablet", "10mg", "[\"08:00\"]",
+            "{{owner}}", "Lisinopril", "20mg", "[\"08:00\"]"
+          ]
+        },
+        { "action": "open", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-own\"] [data-testid=\"edit-med\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "as": "parent" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]", "count": 0, "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "parent" },
+        { "action": "click", "selector": "[data-testid=\"tab-manage\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "as": "parent" },
+        { "action": "expectCount", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]", "count": 0, "as": "parent" },
+        { "action": "open", "as": "kid" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "kid" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "count": 0, "as": "kid" },
+        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "kid" }
+      ]
+    },
+    {
+      "name": "a dose ticked under the pre-1.1 named slot still counts, and All done waits for every scheduled time",
+      "members": {
+        "parent": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('ui-bid', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}", "Amoxicillin", "250mg", "[\"08:00\",\"20:00\"]"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('ui-bid', date('now'), 'morning', datetime('now'), ?)",
+          "params": ["{{parent}}"]
+        },
+        { "action": "open", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"08:00\"][data-taken=\"yes\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"no\"]", "as": "parent" },
+        { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 0, "as": "parent" },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('ui-bid', date('now'), '20:00', datetime('now'), ?)",
+          "params": ["{{parent}}"]
+        },
+        { "action": "reload", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
+        { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 1, "as": "parent" }
+      ]
+    }
+  ]
+}

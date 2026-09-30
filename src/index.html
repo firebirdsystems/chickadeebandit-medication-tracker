@@ -683,6 +683,7 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
           || `<span style="font-size:.82rem;color:var(--muted)">No eligible caregiver recipients.</span>`}
       </div>
       <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        Alerts these people if a dose isn't logged within 30 minutes of its scheduled time.
         Leave everyone unchecked to disable missed-dose escalation for this medication.
       </div>
     </div>
@@ -979,6 +980,7 @@ function slotPillsHtml(med) {
   return medicationTimes(med).map(time => {
     const taken = isDoseTaken(doses, med.id, time, TODAY);
     return `<button class="slot-pill${taken ? " taken" : ""}"
+              data-testid="dose-pill" data-taken="${taken ? "yes" : "no"}"
               data-action="toggle-dose" data-med-id="${esc(med.id)}" data-slot="${esc(time)}"
               title="${taken ? "Mark as not taken" : "Mark as taken"}">
               ${taken ? "✓ " : ""}${esc(formatTime(time))}
@@ -989,11 +991,11 @@ function slotPillsHtml(med) {
 function medRowHtml(med, showEditBtn = false) {
   const done = allDosesComplete(med, doses, TODAY);
   const editBtn = showEditBtn
-    ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
+    ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
     : "";
   const notMonitored = remindersEnabled(med) && unmonitoredIds().has(String(med.id));
   return `
-    <div class="med-row${med.archived ? " archived-row" : ""}">
+    <div class="med-row${med.archived ? " archived-row" : ""}" data-testid="med-row" data-med-id="${esc(med.id)}" data-done="${done ? "yes" : "no"}">
       <div class="med-row-top">
         <div>
           <div class="med-name">${esc(med.name)}</div>
@@ -1010,10 +1012,10 @@ function medRowHtml(med, showEditBtn = false) {
 
 function memberSectionHtml(member, meds, title, canEdit) {
   const done = meds.length > 0 && meds.every(m => allDosesComplete(m, doses, TODAY));
-  const doneBadge = done ? `<span class="badge-done">All done ✓</span>` : "";
+  const doneBadge = done ? `<span class="badge-done" data-testid="all-done">All done ✓</span>` : "";
   const rows = meds.map(m => medRowHtml(m, canEdit)).join("");
   return `
-    <div class="card">
+    <div class="card" data-testid="member-section" data-member-id="${esc(member?.id ?? "")}">
       <div class="card-header">
         ${avatarHtml(member, 34)}
         <span class="member-name">${esc(title)}</span>
@@ -1088,10 +1090,10 @@ function renderManage(me) {
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
     const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
     const editBtn = canEdit
-      ? `<button class="btn-icon" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
+      ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
       : "";
     return `
-      <div class="manage-row${med.archived ? " archived-row" : ""}">
+      <div class="manage-row${med.archived ? " archived-row" : ""}" data-testid="manage-row" data-med-id="${esc(med.id)}">
         ${avatarHtml(owner, 30)}
         <div class="manage-info">
           <div class="name">${esc(med.name)}${med.dosage ? ` <span style="font-weight:400;color:var(--muted)">${esc(med.dosage)}</span>` : ""}</div>
@@ -1145,8 +1147,8 @@ function render() {
 
   const tabsHtml = manageTabVisible ? `
     <div class="tabs">
-      <button class="tab ${activeTab === "today" ? "active" : ""}" onclick="switchTab('today')">Today</button>
-      <button class="tab ${activeTab === "manage" ? "active" : ""}" onclick="switchTab('manage')">Manage</button>
+      <button class="tab ${activeTab === "today" ? "active" : ""}" data-testid="tab-today" onclick="switchTab('today')">Today</button>
+      <button class="tab ${activeTab === "manage" ? "active" : ""}" data-testid="tab-manage" onclick="switchTab('manage')">Manage</button>
     </div>
   ` : "";
 
