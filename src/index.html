@@ -353,7 +353,7 @@
 </div>
 
 <script type="module">
-import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm, searchMatch, hubToday } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, isAdult, hubConfirm, searchMatch, hubToday, glyph } from "/hub-sdk.js";
 import {
   parseJsonArray,
   medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
@@ -696,7 +696,7 @@ function renderEditorTimes() {
   host.innerHTML = editorTimes.length
     ? editorTimes.map(t =>
         `<button type="button" class="toggle-pill on" data-action="remove-time" data-time="${esc(t)}"
-                 title="Remove this time">${esc(formatTime(t))} ✕</button>`
+                 title="Remove this time">${esc(formatTime(t))} ${glyph("close", { accent: "currentColor" })}</button>`
       ).join("")
     : `<span style="font-size:.82rem;color:var(--muted)">No times yet — add one below.</span>`;
 }
@@ -983,7 +983,7 @@ function slotPillsHtml(med) {
               data-testid="dose-pill" data-taken="${taken ? "yes" : "no"}"
               data-action="toggle-dose" data-med-id="${esc(med.id)}" data-slot="${esc(time)}"
               title="${taken ? "Mark as not taken" : "Mark as taken"}">
-              ${taken ? "✓ " : ""}${esc(formatTime(time))}
+              ${taken ? `${glyph("tick", { accent: "currentColor" })} ` : ""}${esc(formatTime(time))}
             </button>`;
   }).join("");
 }
@@ -991,7 +991,7 @@ function slotPillsHtml(med) {
 function medRowHtml(med, showEditBtn = false) {
   const done = allDosesComplete(med, doses, TODAY);
   const editBtn = showEditBtn
-    ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
+    ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit" aria-label="Edit">${glyph("pencil")}</button>`
     : "";
   const notMonitored = remindersEnabled(med) && unmonitoredIds().has(String(med.id));
   return `
@@ -1012,7 +1012,7 @@ function medRowHtml(med, showEditBtn = false) {
 
 function memberSectionHtml(member, meds, title, canEdit) {
   const done = meds.length > 0 && meds.every(m => allDosesComplete(m, doses, TODAY));
-  const doneBadge = done ? `<span class="badge-done" data-testid="all-done">All done ✓</span>` : "";
+  const doneBadge = done ? `<span class="badge-done" data-testid="all-done">All done ${glyph("tick", { accent: "currentColor" })}</span>` : "";
   const rows = meds.map(m => medRowHtml(m, canEdit)).join("");
   return `
     <div class="card" data-testid="member-section" data-member-id="${esc(member?.id ?? "")}">
@@ -1090,7 +1090,7 @@ function renderManage(me) {
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
     const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
     const editBtn = canEdit
-      ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit">✎</button>`
+      ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit" aria-label="Edit">${glyph("pencil")}</button>`
       : "";
     return `
       <div class="manage-row${med.archived ? " archived-row" : ""}" data-testid="manage-row" data-med-id="${esc(med.id)}">
@@ -1162,7 +1162,7 @@ function render() {
   document.getElementById("root").innerHTML = `
     <header>
       <div class="header-left">
-        <h1>💊 Medications</h1>
+        <h1>${glyph("pill")} Medications</h1>
         <div class="date-label">${esc(dateLabel)}</div>
       </div>
     </header>
