@@ -1,0 +1,1903 @@
+{
+  "seed": [
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-120 days'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{me}}",
+        "Vitamin D",
+        "2000 IU",
+        "[\"08:00\"]",
+        0,
+        0,
+        "{{date:-120}}",
+        "With breakfast."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-200 days','-1 hours'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{me}}",
+        "Lisinopril",
+        "20 mg",
+        "[\"08:00\"]",
+        0,
+        0,
+        "{{date:-200}}",
+        "Check blood pressure on Sundays."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','-2 hours'), ?, ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{me}}",
+        "Ibuprofen",
+        "400 mg",
+        "[\"08:00\", \"14:00\", \"20:00\"]",
+        0,
+        0,
+        "{{date:-6}}",
+        "Only while the shoulder is sore. Take with food.",
+        "{{date:4}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-60 days','-3 hours'))",
+      "params": [
+        "perf-med-magn",
+        "{{me}}",
+        "Magnesium",
+        "250 mg",
+        "[\"21:30\"]",
+        0,
+        0,
+        "{{date:-60}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-300 days','-4 hours'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{partner}}",
+        "Levothyroxine",
+        "75 mcg",
+        "[\"06:30\"]",
+        0,
+        0,
+        "{{date:-300}}",
+        "Empty stomach, thirty minutes before coffee."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, every_n_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-40 days','-5 hours'), ?, ?)",
+      "params": [
+        "perf-med-iron",
+        "{{partner}}",
+        "Iron",
+        "65 mg",
+        "[\"12:30\"]",
+        0,
+        0,
+        "{{date:-40}}",
+        "Every other day, with orange juice.",
+        2
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days','-6 hours'), ?, ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{partner}}",
+        "Cetirizine",
+        "10 mg",
+        "[\"07:30\"]",
+        0,
+        0,
+        "{{date:-30}}",
+        "Pollen season only.",
+        "{{date:45}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-400 days','-7 hours'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{adult2}}",
+        "Metformin",
+        "500 mg",
+        "[\"08:00\", \"18:30\"]",
+        0,
+        0,
+        "{{date:-400}}",
+        "With meals."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-400 days','-8 hours'))",
+      "params": [
+        "perf-med-statin",
+        "{{adult2}}",
+        "Atorvastatin",
+        "10 mg",
+        "[\"21:00\"]",
+        0,
+        0,
+        "{{date:-400}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-90 days','-9 hours'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{child}}",
+        "Controller inhaler",
+        "2 puffs",
+        "[\"07:15\", \"19:15\"]",
+        0,
+        0,
+        "{{date:-90}}",
+        "Rinse mouth afterwards."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-150 days','-10 hours'))",
+      "params": [
+        "perf-med-kidvit",
+        "{{child}}",
+        "Multivitamin",
+        "1 gummy",
+        "[\"07:15\"]",
+        0,
+        0,
+        "{{date:-150}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','-11 hours'), ?, ?)",
+      "params": [
+        "perf-med-amox",
+        "{{child}}",
+        "Amoxicillin",
+        "5 ml",
+        "[\"07:30\", \"13:30\", \"19:30\"]",
+        0,
+        0,
+        "{{date:-4}}",
+        "Finish the whole course. Keep in the fridge.",
+        "{{date:5}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-150 days','-12 hours'))",
+      "params": [
+        "perf-med-kidvit2",
+        "{{child2}}",
+        "Multivitamin",
+        "1 gummy",
+        "[\"07:15\"]",
+        0,
+        0,
+        "{{date:-150}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, days_mask) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-80 days','-13 hours'), ?, ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{child2}}",
+        "Fluoride rinse",
+        "10 ml",
+        "[\"19:45\"]",
+        0,
+        0,
+        "{{date:-80}}",
+        "After brushing, school nights.",
+        "1,2,3,4,7"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-20 days','-14 hours'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{child2}}",
+        "Allergy eye drops",
+        "1 drop each eye",
+        "[\"07:20\", \"19:20\"]",
+        0,
+        0,
+        "{{date:-20}}",
+        "{{date:20}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-70 days','-15 hours'), ?, ?)",
+      "params": [
+        "perf-med-pred",
+        "{{me}}",
+        "Prednisone",
+        "10 mg",
+        "[\"08:00\"]",
+        0,
+        1,
+        "{{date:-70}}",
+        "Short taper, finished.",
+        "{{date:-60}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','-16 hours'), ?, ?)",
+      "params": [
+        "perf-med-eardrop",
+        "{{child}}",
+        "Ear drops",
+        "3 drops",
+        "[\"08:00\", \"20:00\"]",
+        0,
+        1,
+        "{{date:-50}}",
+        "Left ear.",
+        "{{date:-43}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-35 days','-17 hours'), ?)",
+      "params": [
+        "perf-med-cough",
+        "{{child2}}",
+        "Cough syrup",
+        "5 ml",
+        "[\"20:00\"]",
+        0,
+        1,
+        "{{date:-35}}",
+        "{{date:-30}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, started_on, created_at, notes, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-220 days','-18 hours'), ?, ?)",
+      "params": [
+        "perf-med-b12",
+        "{{partner}}",
+        "Vitamin B12",
+        "1000 mcg",
+        "[\"08:00\"]",
+        0,
+        1,
+        "{{date:-220}}",
+        "Switched to the combined tablet.",
+        "{{date:-100}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+487 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:0}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+494 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:0}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+501 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:0}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+393 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:0}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+760 minutes'), ?)",
+      "params": [
+        "perf-med-iron",
+        "{{date:0}}",
+        "12:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+467 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:0}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:0}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+441 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:0}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+448 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:0}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','start of day','+460 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:0}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+482 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-1}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+489 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-1}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+496 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-1}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1223 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-1}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1295 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-1}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+462 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-1}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+499 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-1}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1111 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-1}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1268 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-1}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+450 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-1}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1177 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-1}}",
+        "19:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+439 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-1}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+461 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-1}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+828 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-1}}",
+        "13:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+435 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-1}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1192 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-1}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+454 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-1}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','start of day','+1181 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-1}}",
+        "19:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+483 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-2}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+490 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-2}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+497 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-2}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+864 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-2}}",
+        "14:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1206 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-2}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1303 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-2}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+410 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-2}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+752 minutes'), ?)",
+      "params": [
+        "perf-med-iron",
+        "{{date:-2}}",
+        "12:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-2}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+496 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-2}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1133 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-2}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+440 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-2}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1167 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-2}}",
+        "19:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+454 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-2}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+451 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-2}}",
+        "07:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+818 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-2}}",
+        "13:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1185 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-2}}",
+        "19:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+457 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-2}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1189 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-2}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+451 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-2}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','start of day','+1178 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-2}}",
+        "19:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+480 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-3}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+487 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-3}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+854 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-3}}",
+        "14:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1221 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-3}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1293 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-3}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+400 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-3}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+467 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-3}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+504 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-3}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1116 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-3}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1273 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-3}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+455 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-3}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1157 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-3}}",
+        "19:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+444 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-3}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+466 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-3}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+833 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-3}}",
+        "13:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1175 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-3}}",
+        "19:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1197 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-3}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-3}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','start of day','+1161 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-3}}",
+        "19:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+488 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-4}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+495 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-4}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+502 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-4}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+844 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-4}}",
+        "14:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1211 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-4}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1308 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-4}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+390 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-4}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+457 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-4}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+494 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-4}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1131 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-4}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1263 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-4}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+445 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-4}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1172 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-4}}",
+        "19:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-4}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+456 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-4}}",
+        "07:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+823 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-4}}",
+        "13:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1190 minutes'), ?)",
+      "params": [
+        "perf-med-amox",
+        "{{date:-4}}",
+        "19:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+437 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-4}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+1194 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-4}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','start of day','+456 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-4}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+503 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-5}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+485 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-5}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+492 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-5}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+859 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-5}}",
+        "14:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1201 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-5}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1298 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-5}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+405 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-5}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+472 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-5}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+484 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-5}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1271 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-5}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1173 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-5}}",
+        "19:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+435 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-5}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+442 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-5}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1199 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-5}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+461 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-5}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','start of day','+1163 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-5}}",
+        "19:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+490 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-6}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+497 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-6}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+864 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-6}}",
+        "14:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1206 minutes'), ?)",
+      "params": [
+        "perf-med-ibu",
+        "{{date:-6}}",
+        "20:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1303 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-6}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+410 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-6}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+752 minutes'), ?)",
+      "params": [
+        "perf-med-iron",
+        "{{date:-6}}",
+        "12:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-6}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+496 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-6}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1133 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-6}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1265 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-6}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+447 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-6}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1174 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-6}}",
+        "19:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+436 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-6}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+443 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-6}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+455 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-6}}",
+        "07:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','start of day','+1182 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-6}}",
+        "19:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+484 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-7}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+491 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-7}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1308 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-7}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+390 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-7}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+487 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-7}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1124 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-7}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1281 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-7}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+438 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-7}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1165 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-7}}",
+        "19:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+452 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-7}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+459 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-7}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1191 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-7}}",
+        "19:45",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+453 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-7}}",
+        "07:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days','start of day','+1180 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-7}}",
+        "19:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+482 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-8}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+489 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-8}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1306 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-8}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+413 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-8}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+755 minutes'), ?)",
+      "params": [
+        "perf-med-iron",
+        "{{date:-8}}",
+        "12:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+462 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-8}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+499 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-8}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1111 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-8}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1268 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-8}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+450 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-8}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1177 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-8}}",
+        "19:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+439 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-8}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1196 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-8}}",
+        "19:45",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+458 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-8}}",
+        "07:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','start of day','+1160 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-8}}",
+        "19:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+487 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-9}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+494 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-9}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+411 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-9}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+453 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-9}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+490 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-9}}",
+        "08:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+1127 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-9}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+1284 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-9}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+441 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-9}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+1168 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-9}}",
+        "19:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+455 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-9}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+437 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-9}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+1194 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-9}}",
+        "19:45",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','start of day','+1176 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-9}}",
+        "19:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+503 minutes'), ?)",
+      "params": [
+        "perf-med-vitd",
+        "{{date:-10}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+485 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-10}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1302 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-10}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+409 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-10}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+751 minutes'), ?)",
+      "params": [
+        "perf-med-iron",
+        "{{date:-10}}",
+        "12:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+458 minutes'), ?)",
+      "params": [
+        "perf-med-allerg",
+        "{{date:-10}}",
+        "07:30",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1125 minutes'), ?)",
+      "params": [
+        "perf-med-metf",
+        "{{date:-10}}",
+        "18:30",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1282 minutes'), ?)",
+      "params": [
+        "perf-med-statin",
+        "{{date:-10}}",
+        "21:00",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+439 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-10}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1166 minutes'), ?)",
+      "params": [
+        "perf-med-inhaler",
+        "{{date:-10}}",
+        "19:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+453 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit",
+        "{{date:-10}}",
+        "07:15",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+435 minutes'), ?)",
+      "params": [
+        "perf-med-kidvit2",
+        "{{date:-10}}",
+        "07:15",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1192 minutes'), ?)",
+      "params": [
+        "perf-med-fluor",
+        "{{date:-10}}",
+        "19:45",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+454 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-10}}",
+        "07:20",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','start of day','+1181 minutes'), ?)",
+      "params": [
+        "perf-med-eyedrop",
+        "{{date:-10}}",
+        "19:20",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','start of day','+483 minutes'), ?)",
+      "params": [
+        "perf-med-lisin",
+        "{{date:-11}}",
+        "08:00",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','start of day','+1300 minutes'), ?)",
+      "params": [
+        "perf-med-magn",
+        "{{date:-11}}",
+        "21:30",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','start of day','+407 minutes'), ?)",
+      "params": [
+        "perf-med-levo",
+        "{{date:-11}}",
+        "06:30",
+        "{{partner}}"
+      ]
+    }
+  ]
+}
