@@ -115,35 +115,61 @@ export function parseJsonArray(value) {
   try { return JSON.parse(value) ?? []; } catch { return []; }
 }
 
+const isAdultMember = m => !!m && (m.role === "adult" || m.role === "admin");
+
 /**
- * Returns true if the current user can see a medication.
- *
- * Rules (mirrors the server-side `adult_writable` row policy):
- *  - Adults can see every medication in the household.
- *  - Children can only see their own medications.
+ * Whether a member manages medications: reads everyone's, adds for anyone,
+ * edits and archives. Mirrors the hub's rule for the medications table
+ * (owner_only with adults_bypass, member_can_update: false and
+ * steward_writes_only): any adult in a household, and only the steward in a
+ * shared space of any kind. Anyone else reads their own medications alone and
+ * is refused every edit, their own included.
  */
-export function canViewMedication(med, me, members) {
-  if (!me) return false;
-  const isAdult = m => !!m && (m.role === "adult" || m.role === "admin");
-  return isAdult(me) || med.member_id === me.id;
+export function managesMedications(member, { tenantKind = "household", isAdmin = false } = {}) {
+  return tenantKind === "household" ? isAdultMember(member) : isAdmin === true;
 }
 
 /**
- * Returns true if the current user can add, edit, or archive medications.
- * Only adults can manage medications (including for children).
+ * Whether a member may add a medication at all. Whoever manages may add for
+ * anyone. An adult who takes part in a shared space may add one for themself
+ * (the hub stamps the row to them) unless the space is a roster, where every
+ * write belongs to the steward. A child never adds.
  */
-export function canManageMedications(me) {
-  if (!me) return false;
-  return me.role === "adult" || me.role === "admin";
+export function canAddMedication(member, tenant = {}) {
+  if (managesMedications(member, tenant)) return true;
+  const { tenantKind = "household", spaceKind = null } = tenant;
+  return tenantKind !== "household" && spaceKind !== "roster" && isAdultMember(member);
 }
 
 /**
- * Returns true if the current user can edit a specific medication.
- * Adults can edit medications for children and their own; not other adults'.
+ * Returns true if the current user can see a medication: whoever manages
+ * medications sees every one, everyone else only their own.
  */
-export function canEditMedication(med, me, members) {
-  if (!canManageMedications(me)) return false;
+export function canViewMedication(med, me, members, tenant) {
+  if (!me) return false;
+  return managesMedications(me, tenant) || med.member_id === me.id;
+}
+
+/**
+ * Returns true if the current user can edit or archive medications
+ * (including for children). See managesMedications.
+ */
+export function canManageMedications(me, tenant) {
+  if (!me) return false;
+  return managesMedications(me, tenant);
+}
+
+/**
+ * Returns true if the current user can edit a specific medication. In a
+ * household, whoever manages edits their own and children's, and leaves
+ * another adult's alone. In a shared space the steward edits anyone's: the
+ * members there are mostly adults, and keeping their medications is the
+ * steward's job.
+ */
+export function canEditMedication(med, me, members, tenant) {
+  if (!canManageMedications(me, tenant)) return false;
   if (med.member_id === me.id) return true;
+  if ((tenant?.tenantKind ?? "household") !== "household") return true;
   const owner = members.find(m => m.id === med.member_id);
   const ownerIsAdult = !!owner && (owner.role === "adult" || owner.role === "admin");
   return !ownerIsAdult; // can edit children's meds, not other adults'
@@ -205,6 +231,55 @@ const LEGACY_SLOT_FOR_TIME = Object.fromEntries(
 export function allDosesComplete(med, doses, date) {
   const times = medicationTimes(med);
   return times.length > 0 && times.every(time => isDoseTaken(doses, med.id, time, date));
+}
+
+/** Whole days from one yyyy-mm-dd to another, or null when either is not a date. */
+function daysBetween(from, to) {
+  const utc = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ""));
+    return match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+  };
+  const a = utc(from), b = utc(to);
+  return a === null || b === null ? null : Math.round((b - a) / 86400000);
+}
+
+/**
+ * Whether a medication is scheduled on the given yyyy-mm-dd: inside its course
+ * dates, on one of its weekdays, and on a day its every-N-days interval lands
+ * on. Mirrors the WHERE of the manifest's agenda and glance queries, so the
+ * Today tab and the hub's own surfaces name the same medications. An interval
+ * with no start date has no anchor and is ignored, as it is there.
+ */
+export function isDueOn(med, date) {
+  const startedOn = med?.started_on || "";
+  const endsOn = med?.ends_on || "";
+  if (startedOn && startedOn > date) return false;
+  if (endsOn && endsOn < date) return false;
+  const days = String(med?.days_mask ?? "").split(",").map(Number).filter(Boolean);
+  if (days.length) {
+    const sinceEpoch = daysBetween("1970-01-01", date);
+    if (sinceEpoch === null) return false;
+    // 1970-01-01 was a Thursday (ISO weekday 4).
+    const isoWeekday = ((sinceEpoch + 3) % 7 + 7) % 7 + 1;
+    if (!days.includes(isoWeekday)) return false;
+  }
+  const interval = Number(med?.every_n_days);
+  if (Number.isInteger(interval) && interval > 1 && startedOn) {
+    const elapsed = daysBetween(startedOn, date);
+    if (elapsed !== null && elapsed % interval !== 0) return false;
+  }
+  return true;
+}
+
+/**
+ * Whether the Today tab lists a medication: it is due today, or a dose was
+ * already logged against it today (a tick must stay visible, and undoable,
+ * even when the schedule was edited afterwards).
+ */
+export function showsToday(med, doses, date) {
+  if (isDueOn(med, date)) return true;
+  const prefix = `${med?.id}__${date}__`;
+  return Object.keys(doses ?? {}).some(key => key.startsWith(prefix));
 }
 
 /**

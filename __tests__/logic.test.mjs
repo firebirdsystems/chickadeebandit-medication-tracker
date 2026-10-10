@@ -4,11 +4,13 @@ import {
   SLOT_LABELS, ALL_SLOTS,
   parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
+  managesMedications, canAddMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   medicationTimes, remindersEnabled, MAX_TIMES,
   withArchivedState, searchableFields,
+  isDueOn, showsToday,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -156,6 +158,12 @@ describe("canEditMedication", () => {
   it("child cannot edit any medication", () => {
     const m = med({ member_id: "kid-1" });
     expect(canEditMedication(m, MEMBERS[2], MEMBERS)).toBe(false);
+  });
+
+  it("a shared space's steward can edit another adult's medication; a participant cannot", () => {
+    const m = med({ member_id: "adult-2" });
+    expect(canEditMedication(m, MEMBERS[0], MEMBERS, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
+    expect(canEditMedication(m, MEMBERS[0], MEMBERS, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(false);
   });
 });
 
@@ -339,5 +347,124 @@ describe("searchableFields", () => {
     const fields = searchableFields({ name: "Amoxicillin", dosage: "5mg", notes: "with food" });
     expect(fields).toContain("5mg");
     expect(fields).toContain("with food");
+  });
+});
+
+// ── tenant-aware gates ────────────────────────────────────────────────────────
+describe("managesMedications", () => {
+  const adult = MEMBERS[0], child = MEMBERS[2];
+  const space = { tenantKind: "shared_space", spaceKind: "general" };
+
+  it("is any adult in a household, the default tenant", () => {
+    expect(managesMedications(adult)).toBe(true);
+    expect(managesMedications(adult, { tenantKind: "household" })).toBe(true);
+    expect(managesMedications(child)).toBe(false);
+    expect(managesMedications(null)).toBe(false);
+  });
+  it("is not an adult who takes part in a shared space", () => {
+    expect(managesMedications(adult, { ...space, isAdmin: false })).toBe(false);
+    expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: false })).toBe(false);
+  });
+  it("is the steward of a general, roster or co-parenting space", () => {
+    for (const spaceKind of ["general", "roster", "coparenting"]) {
+      expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind, isAdmin: true })).toBe(true);
+    }
+  });
+});
+
+describe("canAddMedication", () => {
+  const adult = MEMBERS[0], child = MEMBERS[2];
+
+  it("follows managing at home: adults add, children do not", () => {
+    expect(canAddMedication(adult)).toBe(true);
+    expect(canAddMedication(child)).toBe(false);
+    expect(canAddMedication(null)).toBe(false);
+  });
+  it("lets an adult who takes part in a general or co-parenting space add their own", () => {
+    expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(true);
+    expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: false })).toBe(true);
+  });
+  it("refuses a child in a space", () => {
+    expect(canAddMedication(child, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(false);
+  });
+  it("is the steward alone in a roster", () => {
+    expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: false })).toBe(false);
+    expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
+  });
+});
+
+describe("medication gates in a shared space", () => {
+  const adult = MEMBERS[0];
+  const participant = { tenantKind: "shared_space", spaceKind: "general", isAdmin: false };
+  const steward = { tenantKind: "shared_space", spaceKind: "general", isAdmin: true };
+
+  it("a participant sees only their own medications and edits none", () => {
+    expect(canViewMedication(med({ member_id: "adult-1" }), adult, MEMBERS, participant)).toBe(true);
+    expect(canViewMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(false);
+    expect(canManageMedications(adult, participant)).toBe(false);
+    expect(canEditMedication(med({ member_id: "adult-1" }), adult, MEMBERS, participant)).toBe(false);
+    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(false);
+  });
+  it("the steward sees and edits every medication, another adult's included", () => {
+    expect(canViewMedication(med({ member_id: "adult-2" }), adult, MEMBERS, steward)).toBe(true);
+    expect(canManageMedications(adult, steward)).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-1" }), adult, MEMBERS, steward)).toBe(true);
+    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, steward)).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-2" }), adult, MEMBERS, steward)).toBe(true);
+  });
+});
+
+describe("isDueOn", () => {
+  // 2026-10-12 is a Monday.
+  it("treats a medication with no schedule limits as due every day", () => {
+    expect(isDueOn({ days_mask: "", every_n_days: 1, started_on: "", ends_on: "" }, "2026-10-12")).toBe(true);
+    expect(isDueOn({ days_mask: "", every_n_days: null, started_on: null, ends_on: null }, "2026-10-12")).toBe(true);
+    expect(isDueOn({}, "2026-10-12")).toBe(true);
+  });
+
+  it("honours the chosen weekdays, Monday as 1 through Sunday as 7", () => {
+    const mwf = { days_mask: "1,3,5" };
+    expect(isDueOn(mwf, "2026-10-12")).toBe(true);   // Mon
+    expect(isDueOn(mwf, "2026-10-13")).toBe(false);  // Tue
+    expect(isDueOn(mwf, "2026-10-16")).toBe(true);   // Fri
+    expect(isDueOn({ days_mask: "7" }, "2026-10-18")).toBe(true);   // Sun
+    expect(isDueOn({ days_mask: "7" }, "2026-10-17")).toBe(false);  // Sat
+  });
+
+  it("is not due before the course starts or after it ends", () => {
+    const course = { started_on: "2026-10-10", ends_on: "2026-10-14" };
+    expect(isDueOn(course, "2026-10-09")).toBe(false);
+    expect(isDueOn(course, "2026-10-10")).toBe(true);
+    expect(isDueOn(course, "2026-10-14")).toBe(true);
+    expect(isDueOn(course, "2026-10-15")).toBe(false);
+  });
+
+  it("counts every-N-days from the start date, across a month boundary", () => {
+    const everyThird = { every_n_days: 3, started_on: "2026-10-30" };
+    expect(isDueOn(everyThird, "2026-10-30")).toBe(true);
+    expect(isDueOn(everyThird, "2026-10-31")).toBe(false);
+    expect(isDueOn(everyThird, "2026-11-02")).toBe(true);
+  });
+
+  it("ignores an interval that has no start date to count from", () => {
+    expect(isDueOn({ every_n_days: 3, started_on: "" }, "2026-10-13")).toBe(true);
+  });
+});
+
+describe("showsToday", () => {
+  const offDay = { id: "m1", days_mask: "1" }; // Mondays only
+
+  it("lists a medication on a day it is due", () => {
+    expect(showsToday(offDay, {}, "2026-10-12")).toBe(true);
+  });
+
+  it("leaves it off a day it is not due", () => {
+    expect(showsToday(offDay, {}, "2026-10-13")).toBe(false);
+  });
+
+  it("keeps it listed on an off day once a dose was logged that day", () => {
+    expect(showsToday(offDay, { "m1__2026-10-13__08:00": true }, "2026-10-13")).toBe(true);
+    expect(showsToday(offDay, { "m1__2026-10-12__08:00": true }, "2026-10-13")).toBe(false);
+    expect(showsToday(offDay, { "m10__2026-10-13__08:00": true }, "2026-10-13")).toBe(false);
   });
 });

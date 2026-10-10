@@ -321,6 +321,7 @@
       margin: 18px 0 8px;
     }
     .section-title:first-child { margin-top: 0; }
+    .scope-note { margin: 14px 0 0; text-align: center; color: var(--muted); font-size: 0.85rem; }
     .filter-bar {
       display: flex;
       align-items: center;
@@ -359,9 +360,9 @@ import {
   medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   formatTime, isClockTime, remindersEnabled, MAX_TIMES,
   withArchivedState,
-  canViewMedication, canManageMedications, canEditMedication,
+  canViewMedication, managesMedications, canAddMedication, canEditMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
-  allDosesComplete, groupByMember, searchableFields,
+  allDosesComplete, groupByMember, searchableFields, showsToday,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -370,14 +371,21 @@ const REMINDER_STATUS = "api/reminders-schedule-status";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
 const ME      = window.__CURRENT_MEMBER ?? null;
 const EVENTS_URL = window.__EVENTS_URL ?? "/api/events";
-const IS_ADMIN  = window.__IS_ADMIN === true;
-const IS_ROSTER = window.__SPACE_KIND === "roster";
-// Who may manage medication regimens (add / edit / archive). In a roster (a care
-// coordinator's client list) that's the steward alone; every other member only
-// logs their own doses. Elsewhere any adult manages. Matches the hub medications
-// policy (adult_writable + member_read_column + steward_writes_only). Logging a
+const TENANT = {
+  tenantKind: window.__TENANT_KIND ?? "household",
+  spaceKind:  window.__SPACE_KIND ?? null,
+  isAdmin:    window.__IS_ADMIN === true,
+};
+// Who may manage medication regimens (see everyone's, add for anyone, edit,
+// archive): any adult in a household, the steward alone in a shared space.
+// Matches the hub medications policy (owner_only + adults_bypass +
+// member_can_update: false + steward_writes_only). An adult who takes part in
+// a space may still add a medication for themself, except in a roster (a care
+// coordinator's client list), where every write is the steward's. Logging a
 // dose is never gated — that stays every member's own.
-const amManage = (m) => IS_ROSTER ? IS_ADMIN : isAdult(m);
+const amManage = (m) => managesMedications(m, TENANT);
+const canAdd   = (m) => canAddMedication(m, TENANT);
+const IN_SPACE = TENANT.tenantKind !== "household";
 
 // ── State ──────────────────────────────────────────────────────────────────
 let members      = [];
@@ -509,9 +517,11 @@ function myMember() {
   return ME ? members.find(m => m.id === ME.id) ?? ME : null;
 }
 
+// The Today tab's medications: the ones this member may see that are scheduled
+// today (see logic.js showsToday). Manage lists every one regardless.
 function visibleMeds() {
   const me = myMember();
-  return medications.filter(med => canViewMedication(med, me, members));
+  return medications.filter(med => canViewMedication(med, me, members, TENANT) && showsToday(med, doses, TODAY));
 }
 
 function unmonitoredIds() {
@@ -554,13 +564,16 @@ window.toggleDose = async function(medId, slot) {
     doses[key] = true;
     render();
     try {
-      await db(
+      const { changed } = await db(
         `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
          VALUES (?, ?, ?, ?, ?)
          ON CONFLICT (medication_id, dose_date, slot) DO NOTHING`,
         [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
       );
       await loadDoses();
+      // Someone else logged this dose first, so the insert wrote nothing and
+      // their tick already announced it.
+      if (changed === 0) { render(); return; }
       // Only the taken direction is announced: undoing a dose has no retraction
       // on the bus, and a "not taken after all" event no consumer handles would
       // be worse than silence.
@@ -663,11 +676,13 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
     </div>
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:500">
-        <input id="f-reminders-on" type="checkbox" ${remindersOn ? "checked" : ""} />
+        <input id="f-reminders-on" type="checkbox" ${remindersOn && !med.archived ? "checked" : ""} ${med.archived ? "disabled" : ""} />
         Send a reminder at each time
       </label>
       <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
-        Reminders during your quiet hours appear in your inbox but won't buzz.
+        ${med.archived
+          ? "An archived medication sends no reminders. Restore it to turn them on."
+          : "Reminders during your quiet hours appear in your inbox but won't buzz."}
       </div>
     </div>
     <div class="form-group">
@@ -733,7 +748,10 @@ window.submitMedication = async function(existingId) {
     hubAlert("Add at least one time to the schedule.");
     return;
   }
-  const remindersOn = document.getElementById("f-reminders-on")?.checked ? 1 : 0;
+  // An archived medication is on no list, so it must never be the source of a
+  // nudge: its reminders stay off whatever the form says.
+  const isArchived = !!existingId && archivedMeds.some(m => m.id === existingId);
+  const remindersOn = !isArchived && document.getElementById("f-reminders-on")?.checked ? 1 : 0;
   const timesJson = JSON.stringify(times);
   const selectedDays = [...document.querySelectorAll(".f-day:checked")].map(el => el.value);
   const daysMask = selectedDays.length === 7 ? "" : normalizeDaysMask(selectedDays);
@@ -878,6 +896,9 @@ window.closeModal = closeModal;
 
 window.openAddModal = function() {
   const me = myMember();
+  if (!canAdd(me)) return;
+  // The hub stamps a row to its author unless the author manages medications,
+  // so only whoever manages is offered other members.
   const adultMembers = amManage(me) ? members : [me].filter(Boolean);
 
   const memberOptions = adultMembers
@@ -911,6 +932,7 @@ window.openAddModal = function() {
       <textarea id="f-notes" placeholder="e.g. Take with food"></textarea>
     </div>
     ${scheduleEditor}
+    ${amManage(me) ? "" : `<p class="scope-note" data-testid="add-own-note">Once added, only the steward can change or archive this medication, or turn its reminders off.</p>`}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" data-action="save-med">Add Medication</button>
@@ -1026,9 +1048,22 @@ function memberSectionHtml(member, meds, title, canEdit) {
   `;
 }
 
+// What an adult who takes part in a shared space gets in place of the Manage
+// tab: a way to add a medication for themself, and who to ask for the rest.
+function participantFooterHtml(me) {
+  if (!IN_SPACE || amManage(me)) return "";
+  const addBtn = canAdd(me)
+    ? `<div class="filter-bar" style="margin:14px 0 0"><button class="btn btn-primary btn-sm" data-testid="add-own-med" onclick="openAddModal()">+ Add Medication</button></div>`
+    : "";
+  return `${addBtn}<p class="scope-note">In a shared space, the steward edits and archives medications.</p>`;
+}
+
 function renderToday(me, visible) {
   if (!visible.length) {
-    return `<div class="empty">No medications to track today.<br>${amManage(me) ? "Add one below." : "Ask a parent to add medications."}</div>`;
+    const hint = amManage(me) || canAdd(me) ? "Add one below."
+      : IN_SPACE ? "Ask the steward to add medications."
+      : "Ask a parent to add medications.";
+    return `<div class="empty">No medications to track today.<br>${hint}</div>${participantFooterHtml(me)}`;
   }
 
   const byMember = groupByMember(visible);
@@ -1042,32 +1077,24 @@ function renderToday(me, visible) {
   }
 
   if (amManage(me)) {
-    // Children's sections
-    const children = members.filter(m => m.role === "child");
-    for (const child of children) {
-      const childMeds = byMember.get(child.id) ?? [];
-      if (childMeds.length) {
-        html += memberSectionHtml(child, childMeds, child.name, true);
-      }
-    }
+    // Everyone who is not an adult first: children, and guests, who are
+    // looked after the same way. The pencil follows canEditMedication, so it
+    // agrees with the Manage tab for every owner.
+    const sectionFor = (owner) => {
+      const meds = byMember.get(owner.id) ?? [];
+      return meds.length
+        ? memberSectionHtml(owner, meds, owner.name, canEditMedication(meds[0], me, members, TENANT))
+        : "";
+    };
+    const others = members.filter(m => m.id !== me?.id);
+    html += others.filter(m => !isAdult(m)).map(sectionFor).join("");
 
-    // Other adults' medications (adults can see the whole household)
-    const otherAdultSections = [];
-    for (const [memberId, meds] of byMember) {
-      if (memberId === me?.id) continue;
-      const owner = members.find(m => m.id === memberId);
-      if (!owner || !isAdult(owner)) continue; // already handled children above
-      otherAdultSections.push({ owner, meds });
-    }
-    if (otherAdultSections.length) {
-      html += `<p class="section-title">Other Adults</p>`;
-      for (const { owner, meds } of otherAdultSections) {
-        html += memberSectionHtml(owner, meds, owner.name, false);
-      }
-    }
+    // Other adults' medications (whoever manages sees everyone's)
+    const otherAdults = others.filter(m => isAdult(m)).map(sectionFor).join("");
+    if (otherAdults) html += `<p class="section-title">Other Adults</p>${otherAdults}`;
   }
 
-  return html;
+  return html + participantFooterHtml(me);
 }
 
 function renderManage(me) {
@@ -1076,8 +1103,8 @@ function renderManage(me) {
   }
 
   const allVisible = [
-    ...medications.filter(med => canViewMedication(med, me, members)),
-    ...(showArchived ? archivedMeds.filter(med => canViewMedication(med, me, members)) : []),
+    ...medications.filter(med => canViewMedication(med, me, members, TENANT)),
+    ...(showArchived ? archivedMeds.filter(med => canViewMedication(med, me, members, TENANT)) : []),
   ];
 
   const shown = searchQ
@@ -1086,7 +1113,7 @@ function renderManage(me) {
 
   const rows = shown.map(med => {
     const owner = members.find(m => m.id === med.member_id);
-    const canEdit = canEditMedication(med, me, members);
+    const canEdit = canEditMedication(med, me, members, TENANT);
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
     const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
     const editBtn = canEdit
@@ -1197,7 +1224,9 @@ document.addEventListener("click", (e) => {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
-  await Promise.all([loadMembers(), loadMedications(), loadDoses()]);
+  // A failed first read still draws the page.
+  try { await Promise.all([loadMembers(), loadMedications(), loadDoses()]); }
+  catch (error) { hubAlert(`Could not load medications: ${error.message}`); }
   await loadReminderStatus();
   render();
 })();
