@@ -1,0 +1,12 @@
+-- The dose a medication carried when a tick was made.
+--
+-- A medication's dosage is edited in place, so a dose history that reads it
+-- from the medication row prints today's dosage against every past tick. The
+-- app copies it here as it logs the dose. NULL means the tick predates this
+-- column (or was written by something other than the app) and the dosage at
+-- the time is not known; '' means the medication had no dosage entered.
+-- Deliberately not backfilled: the only value on hand is the current one, and
+-- writing it would present a guess as a record. The value is encrypted at
+-- rest, like the medication's own dosage, and a migration runs outside the
+-- codec anyway.
+ALTER TABLE app_medication_tracker__doses ADD COLUMN dosage TEXT;

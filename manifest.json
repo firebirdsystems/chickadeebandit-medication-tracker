@@ -101,6 +101,105 @@
     }
   },
   "publishes": ["medication.dose_taken"],
+  "reports": {
+    "views": [
+      {
+        "id": "current_medications",
+        "title": "Medication list",
+        "description": "Every medication in course during the period, by person: the dose, the times of day, which days, the course dates and any notes. A course that ended before the period or starts after it is left out, and so are archived medications. An interval is counted from the start date.",
+        "source": {
+          "kind": "sql",
+          "query": "SELECT m.member_id AS person, m.name AS medication, m.dosage AS dose, REPLACE(REPLACE(REPLACE(REPLACE(m.reminder_times, '[', ''), ']', ''), '\"', ''), ',', ', ') AS times, CASE WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' AND m.days_mask = '' THEN 'Every ' || m.every_n_days || ' days' WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' THEN 'Every ' || m.every_n_days || ' days, only on ' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') WHEN m.days_mask = '' THEN 'Every day' ELSE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') END AS days, m.started_on AS started, m.ends_on AS ends, m.notes AS notes FROM app_medication_tracker__medications m WHERE m.archived = 0 AND (m.started_on IS NULL OR m.started_on = '' OR m.started_on <= :range_end) AND (m.ends_on IS NULL OR m.ends_on = '' OR m.ends_on >= :range_start) ORDER BY m.member_id, m.created_at"
+        },
+        "columns": [
+          {
+            "key": "person",
+            "label": "Person",
+            "format": "member"
+          },
+          {
+            "key": "medication",
+            "label": "Medication"
+          },
+          {
+            "key": "dose",
+            "label": "Dose"
+          },
+          {
+            "key": "times",
+            "label": "Times"
+          },
+          {
+            "key": "days",
+            "label": "Days"
+          },
+          {
+            "key": "started",
+            "label": "Started",
+            "format": "date"
+          },
+          {
+            "key": "ends",
+            "label": "Ends",
+            "format": "date"
+          },
+          {
+            "key": "notes",
+            "label": "Notes"
+          }
+        ],
+        "group_by": "person"
+      },
+      {
+        "id": "doses_taken",
+        "title": "Doses taken",
+        "description": "Each dose that was ticked off in the period, by person, newest first. A dose that was not ticked does not appear. The dose is the one on the medication when it was ticked. A tick with no dose recorded shows the medication's current dose and says so. Doses are kept for two years.",
+        "source": {
+          "kind": "sql",
+          "query": "SELECT m.member_id AS person, d.dose_date AS day, d.slot AS at_time, m.name AS medication, COALESCE(d.dosage, m.dosage) AS dose, CASE WHEN d.dosage IS NULL THEN 'Current dose' ELSE 'When ticked' END AS dose_from, d.taken_at AS ticked, d.logged_by AS ticked_by FROM app_medication_tracker__doses d JOIN app_medication_tracker__medications m ON m.id = d.medication_id WHERE d.dose_date >= :range_start AND d.dose_date <= :range_end ORDER BY m.member_id, d.dose_date DESC, d.slot"
+        },
+        "columns": [
+          {
+            "key": "person",
+            "label": "Person",
+            "format": "member"
+          },
+          {
+            "key": "day",
+            "label": "Day",
+            "format": "date"
+          },
+          {
+            "key": "at_time",
+            "label": "Dose time"
+          },
+          {
+            "key": "medication",
+            "label": "Medication"
+          },
+          {
+            "key": "dose",
+            "label": "Dose"
+          },
+          {
+            "key": "dose_from",
+            "label": "Dose recorded"
+          },
+          {
+            "key": "ticked",
+            "label": "Ticked at",
+            "format": "datetime"
+          },
+          {
+            "key": "ticked_by",
+            "label": "Ticked by",
+            "format": "member"
+          }
+        ],
+        "group_by": "person"
+      }
+    ]
+  },
   "nav": { "label": "Medications" },
   "agenda": {
     "kind": "reminder",

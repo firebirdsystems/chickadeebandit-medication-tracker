@@ -304,3 +304,43 @@ export function groupByMember(medications) {
 export function searchableFields(item) {
   return [item.name, item.dosage, item.notes];
 }
+
+// ── Printed lists ─────────────────────────────────────────────────────────────
+//
+// The hub renders the documents from the manifest's `reports`. The page only
+// builds their addresses.
+
+/**
+ * The yyyy-mm-dd that is `days` before `todayStr`, or "" when `todayStr` is not
+ * a date. Worked out on the calendar and not from a clock, so it names the same
+ * day on any device: `todayStr` is the HOUSEHOLD's today, which is the calendar
+ * a dose's date is stored on.
+ */
+export function daysBefore(todayStr, days) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(todayStr ?? ""));
+  if (!match) return "";
+  const start = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - days));
+  return start.toISOString().slice(0, 10);
+}
+
+/**
+ * The dates one printed list is asked for. The medication list is the courses
+ * running today, so both ends are today: a course that has ended or not begun
+ * is not something being taken now. The dose history covers `days` calendar
+ * days ending today. The hub includes both ends, so it starts `days - 1` back.
+ * Without a household date both are open, which the hub reads as everything.
+ */
+export function reportRange(id, todayStr, days) {
+  const today = daysBefore(todayStr, 0);
+  if (!today) return { from: "", to: "" };
+  return { from: id === "doses_taken" ? daysBefore(today, Math.max(days, 1) - 1) : today, to: today };
+}
+
+/** The address of one document. An empty bound is left off, which the hub reads as open-ended. */
+export function reportUrl(reportsUrl, id, format, from, to, base) {
+  const url = new URL(`${reportsUrl}/${encodeURIComponent(id)}`, base);
+  url.searchParams.set("format", format);
+  if (from) url.searchParams.set("from", from);
+  if (to) url.searchParams.set("to", to);
+  return url.toString();
+}

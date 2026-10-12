@@ -365,6 +365,7 @@ import {
   canViewMedication, managesMedications, canAddMedication, canEditMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
+  reportRange, reportUrl,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -373,6 +374,7 @@ const REMINDER_STATUS = "api/reminders-schedule-status";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
 const ME      = window.__CURRENT_MEMBER ?? null;
 const EVENTS_URL = window.__EVENTS_URL ?? "/api/events";
+const REPORTS_URL = window.__REPORTS_URL ?? "";
 const TENANT = {
   tenantKind: window.__TENANT_KIND ?? "household",
   spaceKind:  window.__SPACE_KIND ?? null,
@@ -576,10 +578,13 @@ window.toggleDose = async function(medId, slot) {
     render();
     try {
       const { changed } = await db(
-        `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
-         VALUES (?, ?, ?, ?, ?)
+        // The dosage is copied onto the tick because the medication's own is
+        // edited in place: the dose history must print what was taken then.
+        `INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by, dosage)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (medication_id, dose_date, slot) DO NOTHING`,
-        [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo"]
+        [medId, TODAY, slot, new Date().toISOString(), ME?.id ?? "demo",
+         medications.find(m => m.id === medId)?.dosage ?? ""]
       );
       await loadDoses();
       // Someone else logged this dose first, so the insert wrote nothing and
@@ -1161,7 +1166,39 @@ function renderManage(me) {
     <div class="card">
       ${rows || `<div class="empty">${searchQ ? `Nothing matches "${esc(searchQ)}".` : "No medications yet. Add one above."}</div>`}
     </div>
+    ${printCardHtml()}
   `;
+}
+
+// The hub renders these documents from the manifest's `reports`, as whoever
+// asks and through the same row policy as this page, so the list holds the
+// medications this person can see here and no others. Each opens in a new tab,
+// ready to print or save as a PDF; the CSV arrives as a download. Outside the
+// hub there is nothing to render them.
+const PRINT_DAYS = 90;
+function printCardHtml() {
+  if (!REPORTS_URL) return "";
+  const row = (id, title, about) => `
+      <div class="manage-row" data-testid="print-row" data-report="${id}">
+        <div class="manage-info">
+          <div class="name">${title}</div>
+          <div class="meta">${about}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" data-action="open-report" data-report="${id}" data-format="html">Open</button>
+        <button class="btn btn-ghost btn-sm" data-action="open-report" data-report="${id}" data-format="csv">CSV</button>
+      </div>`;
+  return `
+    <div class="card" data-testid="print-card" style="margin-top:14px">
+      ${row("current_medications", "Current medications", "Every medication being taken today, with its dose, times and days, by person. The list to hand a doctor or a pharmacist.")}
+      ${row("doses_taken", "Doses taken", `Every dose ticked off in the last ${PRINT_DAYS} days.`)}
+    </div>`;
+}
+function openReport(id, format) {
+  // Both are dated on the household's calendar, the one course dates and dose
+  // dates are stored on: the list is the courses running today, the history
+  // the last PRINT_DAYS days.
+  const { from, to } = reportRange(id, hubToday(), PRINT_DAYS);
+  window.open(reportUrl(REPORTS_URL, id, format, from, to, window.location.href), "_blank", "noopener");
 }
 
 // render() rewrites the whole view, so put the caret back after typing.
@@ -1251,6 +1288,7 @@ document.addEventListener("click", (e) => {
     case "add-time":    window.addEditorTime(); break;
     case "remove-time": window.removeEditorTime(el.dataset.time); break;
     case "retry-load":  void firstLoad(); break;
+    case "open-report": openReport(el.dataset.report, el.dataset.format); break;
   }
 });
 

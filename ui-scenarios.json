@@ -1,7 +1,7 @@
 {
   "scenarios": [
     {
-      "name": "an adult edits their own and a child's medication but never another adult's; a child gets no edit or manage controls",
+      "name": "an adult edits their own and a child's medication but never another adult's; a child gets no edit or manage controls; whoever manages is offered the printed lists",
       "members": {
         "owner": "admin",
         "parent": "adult",
@@ -27,10 +27,13 @@
         { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"]", "as": "parent" },
         { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "as": "parent" },
         { "action": "expectCount", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]", "count": 0, "as": "parent" },
+        { "action": "expectCount", "selector": "[data-testid=\"print-card\"] [data-testid=\"print-row\"]", "count": 2, "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"print-row\"][data-report=\"current_medications\"] [data-format=\"csv\"]", "as": "parent" },
         { "action": "open", "as": "kid" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "kid" },
         { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "count": 0, "as": "kid" },
-        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "kid" }
+        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "kid" },
+        { "action": "expectCount", "selector": "[data-testid=\"print-card\"]", "count": 0, "as": "kid" }
       ]
     },
     {
@@ -53,11 +56,8 @@
         { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"08:00\"][data-taken=\"yes\"]", "as": "parent" },
         { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"no\"]", "as": "parent" },
         { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 0, "as": "parent" },
-        {
-          "action": "seedRaw",
-          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('ui-bid', date('now'), '20:00', datetime('now'), ?)",
-          "params": ["{{parent}}"]
-        },
+        { "action": "click", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"]", "as": "parent" },
+        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
         { "action": "reload", "as": "parent" },
         { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
         { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 1, "as": "parent" }

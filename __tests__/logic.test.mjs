@@ -11,6 +11,7 @@ import {
   medicationTimes, remindersEnabled, MAX_TIMES,
   withArchivedState, searchableFields,
   isDueOn, showsToday,
+  daysBefore, reportRange, reportUrl,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -466,5 +467,53 @@ describe("showsToday", () => {
     expect(showsToday(offDay, { "m1__2026-10-13__08:00": true }, "2026-10-13")).toBe(true);
     expect(showsToday(offDay, { "m1__2026-10-12__08:00": true }, "2026-10-13")).toBe(false);
     expect(showsToday(offDay, { "m10__2026-10-13__08:00": true }, "2026-10-13")).toBe(false);
+  });
+});
+
+describe("daysBefore", () => {
+  it("counts back on the calendar, across a month, a year and a leap day", () => {
+    expect(daysBefore("2026-10-11", 90)).toBe("2026-07-13");
+    expect(daysBefore("2027-01-15", 90)).toBe("2026-10-17");
+    expect(daysBefore("2028-03-31", 90)).toBe("2028-01-01");
+    expect(daysBefore("2026-10-11", 0)).toBe("2026-10-11");
+  });
+
+  it("is empty when it is not given a date", () => {
+    expect(daysBefore("", 90)).toBe("");
+    expect(daysBefore(null, 90)).toBe("");
+    expect(daysBefore("today", 90)).toBe("");
+  });
+});
+
+describe("reportRange", () => {
+  it("asks for the courses running today, and for the last days of doses", () => {
+    expect(reportRange("current_medications", "2026-10-12", 90)).toEqual({ from: "2026-10-12", to: "2026-10-12" });
+    // Both ends are in the document, so 90 days ending 12 October start on 15 July.
+    expect(reportRange("doses_taken", "2026-10-12", 90)).toEqual({ from: "2026-07-15", to: "2026-10-12" });
+    expect(reportRange("doses_taken", "2026-10-12", 1)).toEqual({ from: "2026-10-12", to: "2026-10-12" });
+  });
+
+  it("leaves both ends open without a household date", () => {
+    expect(reportRange("current_medications", "", 90)).toEqual({ from: "", to: "" });
+    expect(reportRange("doses_taken", null, 90)).toEqual({ from: "", to: "" });
+    expect(reportRange("current_medications", "today", 90)).toEqual({ from: "", to: "" });
+  });
+});
+
+describe("reportUrl", () => {
+  const base = "https://hub.example/run/medication-tracker/";
+
+  it("addresses one document with its format and dates", () => {
+    expect(reportUrl("/run/medication-tracker/api/reports", "doses_taken", "html", "2026-07-13", "2026-10-11", base))
+      .toBe("https://hub.example/run/medication-tracker/api/reports/doses_taken?format=html&from=2026-07-13&to=2026-10-11");
+  });
+
+  it("leaves an empty bound off, which asks for every date on that side", () => {
+    expect(reportUrl("/run/medication-tracker/api/reports", "current_medications", "csv", "", "", base))
+      .toBe("https://hub.example/run/medication-tracker/api/reports/current_medications?format=csv");
+  });
+
+  it("escapes the view id", () => {
+    expect(reportUrl("/r", "a/b?c", "html", "", "", base)).toBe("https://hub.example/r/a%2Fb%3Fc?format=html");
   });
 });
