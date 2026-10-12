@@ -11,7 +11,7 @@ describe("medication UI safety contract", () => {
   });
 
   it("rejects unsuccessful DB responses and rolls optimistic dose state back", () => {
-    expect(source).toContain("if (!res.ok || body?.error)");
+    expect(source).toContain('if (!res.ok || !body || typeof body !== "object" || body.error)');
     expect(source).toContain("Could not mark this dose taken");
     expect(source).toContain("Could not undo this dose");
   });

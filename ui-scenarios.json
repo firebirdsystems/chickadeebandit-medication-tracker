@@ -62,6 +62,41 @@
         { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
         { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 1, "as": "parent" }
       ]
+    },
+    {
+      "name": "in a shared space a participant sees only their own medication with no edit or Manage; the steward edits every member's",
+      "context": "shared_space",
+      "members": {
+        "steward": "admin",
+        "pat": "adult",
+        "sam": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('sp-pat', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z'), ('sp-sam', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{pat}}", "Vitamin D", "2000 IU", "[\"08:00\"]",
+            "{{sam}}", "Lisinopril", "20mg", "[\"08:00\"]"
+          ]
+        },
+        { "action": "open", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "count": 0, "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 1, "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"steward-note\"]", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"add-own-med\"]", "as": "pat" },
+        { "action": "open", "as": "steward" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "steward" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" },
+        { "action": "expectCount", "selector": "[data-testid=\"steward-note\"]", "count": 0, "as": "steward" },
+        { "action": "expectCount", "selector": "[data-testid=\"add-own-med\"]", "count": 0, "as": "steward" },
+        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "steward" },
+        { "action": "click", "selector": "[data-testid=\"tab-manage\"]", "as": "steward" },
+        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "steward" },
+        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" }
+      ]
     }
   ]
 }

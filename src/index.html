@@ -346,6 +346,8 @@
       background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
     }
     .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
+    .load-error { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.9rem; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .load-error-retry { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 5px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -425,8 +427,8 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok || body?.error) {
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body || typeof body !== "object" || body.error) {
     throw new Error(body?.error || `Database request failed (${res.status})`);
   }
   return body;
@@ -449,10 +451,14 @@ async function publishEvent(type, subjectId, payload = {}) {
 // ── Data loading ───────────────────────────────────────────────────────────
 async function loadMembers() {
   if (!CONTEXT) { members = DEMO_MEMBERS; return; }
-  try {
-    const res  = await fetch(`${CONTEXT}?keys=family.members`);
-    members = ((await res.json())["family.members"]) ?? [];
-  } catch { members = []; }
+  // Throws when the members cannot be read, so firstLoad shows the banner
+  // rather than a household with nobody to give a medication to.
+  const res  = await fetch(`${CONTEXT}?keys=family.members`);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error("Couldn’t reach the hub. Try again.");
+  // A 200 can still name a key the hub failed to read: that is a failed read too.
+  if (Array.isArray(json.$errors) && json.$errors.includes("family.members")) throw new Error("Couldn’t reach the hub. Try again.");
+  members = json["family.members"] ?? [];
 }
 
 async function loadMedications() {
@@ -497,7 +503,8 @@ async function loadReminderStatus() {
   }
   try {
     const res = await fetch(REMINDER_STATUS, { headers: { Accept: "application/json" } });
-    reminderStatus = res.ok ? await res.json() : null;
+    const body = res.ok ? await res.json() : null;
+    reminderStatus = body && typeof body === "object" && !body.error ? body : null;
   } catch {
     reminderStatus = null;
   }
@@ -506,8 +513,11 @@ async function loadReminderStatus() {
 async function refreshLocalDay(now = new Date()) {
   const next = nextTodayKey(TODAY, hubToday(now));
   if (!next.changed) return false;
+  const was = TODAY;
   TODAY = next.today;
-  await loadDoses();
+  // The new day's doses could not be read: stay on the day that was, so the
+  // next tick asks again rather than drawing the new day from the old doses.
+  try { await loadDoses(); } catch (e) { TODAY = was; throw e; }
   render();
   return true;
 }
@@ -550,7 +560,8 @@ function reminderStatusHtml() {
 
 // ── Dose toggle ────────────────────────────────────────────────────────────
 window.toggleDose = async function(medId, slot) {
-  await refreshLocalDay();
+  try { await refreshLocalDay(); }
+  catch (error) { hubAlert(`Couldn’t load today’s doses: ${error.message}`); return; }
   const storedKey = existingDoseKey(doses, medId, slot, TODAY);
   const key = `${medId}__${TODAY}__${slot}`;
   const taking = storedKey === null;
@@ -792,7 +803,7 @@ window.submitMedication = async function(existingId) {
     closeModal();
     render();
     try {
-      await db(
+      const { changed } = await db(
         `UPDATE app_medication_tracker__medications
             SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
                 days_mask=?, every_n_days=?, started_on=?, ends_on=?,
@@ -801,8 +812,10 @@ window.submitMedication = async function(existingId) {
         [name, dosage, notes, timesJson, remindersOn, daysMask, everyNDays,
           startedOn, endsOn, remindMemberIds, buddyMemberIds, existingId]
       );
+      // The re-read puts back what is stored when the hub changed no row.
       await Promise.all([loadMedications(), loadReminderStatus()]);
       render();
+      if (changed === 0) hubAlert("This medication could not be changed. Nothing was saved.");
     } catch (error) {
       if (idx !== -1 && previous) medications[idx] = previous;
       render();
@@ -866,14 +879,16 @@ window.archiveMedication = async function(id, archive) {
   render();
 
   try {
-    await db(
+    const { changed } = await db(
       `UPDATE app_medication_tracker__medications
           SET archived = ?, reminders_on = 0
         WHERE id = ?`,
       [archive ? 1 : 0, id],
     );
+    // The re-read puts back what is stored when the hub changed no row.
     await Promise.all([loadMedications(), loadReminderStatus()]);
     render();
+    if (changed === 0) hubAlert(`Could not ${label} this medication. Nothing was changed.`);
   } catch (error) {
     medications = previousMedications;
     archivedMeds = previousArchived;
@@ -1055,7 +1070,7 @@ function participantFooterHtml(me) {
   const addBtn = canAdd(me)
     ? `<div class="filter-bar" style="margin:14px 0 0"><button class="btn btn-primary btn-sm" data-testid="add-own-med" onclick="openAddModal()">+ Add Medication</button></div>`
     : "";
-  return `${addBtn}<p class="scope-note">In a shared space, the steward edits and archives medications.</p>`;
+  return `${addBtn}<p class="scope-note" data-testid="steward-note">In a shared space, the steward edits and archives medications.</p>`;
 }
 
 function renderToday(me, visible) {
@@ -1170,6 +1185,22 @@ function render() {
 
   const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
+  // The first load failed: the banner alone, under the header. No "nothing
+  // scheduled" for medications that could not be read, and no Add button.
+  if (loadFailed) {
+    document.getElementById("root").innerHTML = `
+      <header>
+        <div class="header-left">
+          <h1>${glyph("pill")} Medications</h1>
+          <div class="date-label">${esc(dateLabel)}</div>
+        </div>
+      </header>
+      <div class="load-error" data-testid="load-error" role="alert"><span>Couldn’t load the medications.</span>
+        <button type="button" class="load-error-retry" data-testid="load-retry" data-action="retry-load">Try again</button></div>
+    `;
+    return;
+  }
+
   const manageTabVisible = amManage(me);
 
   const tabsHtml = manageTabVisible ? `
@@ -1219,22 +1250,29 @@ document.addEventListener("click", (e) => {
     case "save-med":    window.submitMedication(el.dataset.medId ?? null); break;
     case "add-time":    window.addEditorTime(); break;
     case "remove-time": window.removeEditorTime(el.dataset.time); break;
+    case "retry-load":  void firstLoad(); break;
   }
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-(async () => {
-  // A failed first read still draws the page.
-  try { await Promise.all([loadMembers(), loadMedications(), loadDoses()]); }
-  catch (error) { hubAlert(`Could not load medications: ${error.message}`); }
+// Set when the first load fails, cleared when one succeeds. "Try again" runs
+// the same load in place.
+let loadFailed = false;
+async function firstLoad() {
+  try {
+    await Promise.all([loadMembers(), loadMedications(), loadDoses()]);
+    loadFailed = false;
+  } catch { loadFailed = true; }
   await loadReminderStatus();
   render();
-})();
-window.addEventListener("focus", () => { void refreshLocalDay(); void loadReminderStatus().then(render); });
+}
+void firstLoad();
+// A day rollover that cannot be read stays quiet here; the next tick retries.
+window.addEventListener("focus", () => { void refreshLocalDay().catch(() => {}); void loadReminderStatus().then(render); });
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { void refreshLocalDay(); void loadReminderStatus().then(render); }
+  if (!document.hidden) { void refreshLocalDay().catch(() => {}); void loadReminderStatus().then(render); }
 });
-setInterval(() => { void refreshLocalDay(); }, 60_000);
+setInterval(() => { void refreshLocalDay().catch(() => {}); }, 60_000);
 </script>
 </body>
 </html>
