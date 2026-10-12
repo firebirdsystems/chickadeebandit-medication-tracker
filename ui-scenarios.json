@@ -64,7 +64,7 @@
       ]
     },
     {
-      "name": "in a shared space a participant sees only their own medication with no edit or Manage; the steward edits every member's",
+      "name": "in a shared space every adult sees and edits every shared medication, a private one stays its owner's, and only its owner is offered the choice",
       "context": "shared_space",
       "members": {
         "steward": "admin",
@@ -74,27 +74,37 @@
       "steps": [
         {
           "action": "seedRaw",
-          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('sp-pat', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z'), ('sp-sam', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:01Z')",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, visibility, created_at) VALUES ('sp-pat', ?, ?, ?, ?, 0, 0, 'family', '2026-01-01T00:00:00Z'), ('sp-sam', ?, ?, ?, ?, 0, 0, 'family', '2026-01-01T00:00:01Z'), ('sp-sam-own', ?, ?, ?, ?, 0, 0, 'private', '2026-01-01T00:00:02Z')",
           "params": [
             "{{pat}}", "Vitamin D", "2000 IU", "[\"08:00\"]",
-            "{{sam}}", "Lisinopril", "20mg", "[\"08:00\"]"
+            "{{sam}}", "Lisinopril", "20mg", "[\"08:00\"]",
+            "{{sam}}", "Sertraline", "50mg", "[\"21:00\"]"
           ]
         },
         { "action": "open", "as": "pat" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "count": 0, "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 1, "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"steward-note\"]", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"add-own-med\"]", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"]", "count": 0, "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 2, "as": "pat" },
+        { "action": "expectCount", "selector": "[data-testid=\"steward-note\"]", "count": 0, "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "pat" },
+        { "action": "click", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "pat" },
+        { "action": "expectHidden", "selector": "[data-testid=\"f-visibility\"]", "as": "pat" },
+        { "action": "click", "selector": ".modal-actions .btn-ghost", "as": "pat" },
+        { "action": "click", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"f-visibility\"]", "as": "pat" },
+        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "private", "as": "pat" },
+        { "action": "click", "selector": ".modal-actions [data-action=\"save-med\"]", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"][data-visibility=\"private\"] [data-testid=\"private-badge\"]", "as": "pat" },
+        { "action": "open", "as": "sam" },
+        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"] [data-testid=\"private-badge\"]", "as": "sam" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"]", "count": 0, "as": "sam" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 2, "as": "sam" },
         { "action": "open", "as": "steward" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "steward" },
+        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 1, "as": "steward" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" },
-        { "action": "expectCount", "selector": "[data-testid=\"steward-note\"]", "count": 0, "as": "steward" },
-        { "action": "expectCount", "selector": "[data-testid=\"add-own-med\"]", "count": 0, "as": "steward" },
-        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "steward" },
         { "action": "click", "selector": "[data-testid=\"tab-manage\"]", "as": "steward" },
-        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "steward" },
+        { "action": "expectCount", "selector": "[data-testid=\"manage-row\"]", "count": 1, "as": "steward" },
         { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" }
       ]
     }

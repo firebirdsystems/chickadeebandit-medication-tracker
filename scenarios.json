@@ -106,7 +106,7 @@
           "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = 'm1'",
           "expect": {
             "status": 403,
-            "errorIncludes": "only be modified by adults"
+            "errorIncludes": "adult members"
           }
         },
         {
@@ -115,7 +115,7 @@
           "sql": "DELETE FROM app_medication_tracker__medications WHERE id = 'm1'",
           "expect": {
             "status": 403,
-            "errorIncludes": "only be modified by adults"
+            "errorIncludes": "requires an adult member"
           }
         },
         {
@@ -159,7 +159,7 @@
       ]
     },
     {
-      "name": "a child can tick off a dose of their own medication but not a sibling's",
+      "name": "a child can tick off a dose of their own medication but not a sibling's; a parent can undo a child's tick",
       "members": {
         "parent": "adult",
         "kidA": "child",
@@ -208,6 +208,23 @@
                 "medication_id": "m_a"
               }
             ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm_a' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
           }
         }
       ]
@@ -280,7 +297,7 @@
           ],
           "expect": {
             "status": 403,
-            "errorIncludes": "requires an adult"
+            "errorIncludes": "adult members"
           }
         },
         {
@@ -311,50 +328,479 @@
       ]
     },
     {
-      "name": "in a shared space only the steward sees and manages every member's medications; a participant adult sees only their own",
+      "name": "in a shared space every adult sees and keeps every shared medication and ticks its doses, never reaches a private one, cannot take one over, and a tick is undone by its writer, the medication's owner or the steward",
       "context": "shared_space",
-      "members": { "a": "adult", "b": "adult", "steward": "admin" },
+      "members": {
+        "a": "adult",
+        "b": "adult",
+        "steward": "admin",
+        "c": "adult"
+      },
       "steps": [
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at) VALUES (?, ?, ?, ?)",
-          "params": ["m-a", "{{a}}", "Vitamin D", "2026-01-01T00:00:00Z"]
+          "params": [
+            "m-a",
+            "{{a}}",
+            "Vitamin D",
+            "2026-01-01T00:00:00Z"
+          ]
         },
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at) VALUES (?, ?, ?, ?)",
-          "params": ["m-b", "{{b}}", "Inhaler", "2026-01-01T00:00:00Z"]
+          "params": [
+            "m-b",
+            "{{b}}",
+            "Inhaler",
+            "2026-01-01T00:00:01Z"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES (?, ?, ?, 'private', ?)",
+          "params": [
+            "m-b-private",
+            "{{b}}",
+            "Sertraline",
+            "2026-01-01T00:00:02Z"
+          ]
         },
         {
           "action": "db",
           "as": "a",
           "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
-          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "id": "m-a" }] }
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m-a"
+              },
+              {
+                "id": "m-b"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m-a"
+              },
+              {
+                "id": "m-b"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 3,
+            "rowsContain": [
+              {
+                "id": "m-b-private"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_medication_tracker__medications SET dosage = ? WHERE id = ?",
+          "params": [
+            "2 puffs",
+            "m-b"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT dosage FROM app_medication_tracker__medications WHERE id = 'm-b'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "dosage": "2 puffs"
+              }
+            ]
+          }
         },
         {
           "action": "db",
           "as": "a",
           "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = ?",
-          "params": ["m-b"]
+          "params": [
+            "m-b-private"
+          ],
+          "expect": {
+            "status": 200
+          }
         },
         {
           "action": "db",
           "as": "steward",
-          "sql": "SELECT id, archived FROM app_medication_tracker__medications ORDER BY id",
-          "expect": { "status": 200, "rowCount": 2, "rowsContain": [{ "id": "m-b", "archived": 0 }] }
-        },
-        {
-          "action": "db",
-          "as": "steward",
-          "sql": "UPDATE app_medication_tracker__medications SET dosage = ? WHERE id = ?",
-          "params": ["2 puffs", "m-b"],
-          "expect": { "status": 200 }
+          "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = ?",
+          "params": [
+            "m-b-private"
+          ],
+          "expect": {
+            "status": 200
+          }
         },
         {
           "action": "db",
           "as": "b",
-          "sql": "SELECT dosage FROM app_medication_tracker__medications",
-          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "dosage": "2 puffs" }] }
+          "sql": "SELECT id, archived FROM app_medication_tracker__medications WHERE id = 'm-b-private'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-b-private",
+                "archived": 0
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-b', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{a}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-b-private', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{a}}"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT medication_id, logged_by FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m-b"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_medication_tracker__medications SET member_id = ?, visibility = 'private' WHERE id = 'm-b'",
+          "params": [
+            "{{a}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "immutable"
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "UPDATE app_medication_tracker__medications SET member_id = ? WHERE id = 'm-b'",
+          "params": [
+            "{{steward}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "immutable"
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT id, visibility FROM app_medication_tracker__medications WHERE id = 'm-b'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-b",
+                "visibility": "family"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "c",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-b' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-b' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-b', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{a}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-b' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "an adult keeps a medication private: another adult sees neither it nor its doses, while a child's medication stays shared with every adult",
+      "members": {
+        "mum": "adult",
+        "dad": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, reminder_times, visibility, created_at) VALUES ('m-mum', ?, 'Sertraline', '[\"08:00\"]', 'private', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{mum}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, reminder_times, created_at) VALUES ('m-kid', ?, 'Allergy tablet', '[\"08:00\"]', '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT id, member_id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-mum', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{mum}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET archived = 1 WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT archived FROM app_medication_tracker__medications WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "archived": 0
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 403,
+            "errorIncludes": "adult members"
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET dosage = '10mg' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT dosage FROM app_medication_tracker__medications WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "dosage": "10mg"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET member_id = ? WHERE id = 'm-kid'",
+          "params": [
+            "{{dad}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "immutable"
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-kid', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{dad}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-kid' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses WHERE medication_id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
         }
       ]
     }

@@ -363,6 +363,7 @@ import {
   formatTime, isClockTime, remindersEnabled, MAX_TIMES,
   withArchivedState,
   canViewMedication, managesMedications, canAddMedication, canEditMedication,
+  canAssignOwner, canChooseVisibility, isPrivateMedication, VISIBILITY_FAMILY, VISIBILITY_PRIVATE,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
   reportRange, reportUrl,
@@ -380,16 +381,18 @@ const TENANT = {
   spaceKind:  window.__SPACE_KIND ?? null,
   isAdmin:    window.__IS_ADMIN === true,
 };
-// Who may manage medication regimens (see everyone's, add for anyone, edit,
-// archive): any adult in a household, the steward alone in a shared space.
-// Matches the hub medications policy (owner_only + adults_bypass +
-// member_can_update: false + steward_writes_only). An adult who takes part in
-// a space may still add a medication for themself, except in a roster (a care
-// coordinator's client list), where every write is the steward's. Logging a
-// dose is never gated — that stays every member's own.
-const amManage = (m) => managesMedications(m, TENANT);
-const canAdd   = (m) => canAddMedication(m, TENANT);
-const IN_SPACE = TENANT.tenantKind !== "household";
+// Who may manage medications (see every shared one, add, edit, archive):
+// every adult in a household or a general or co-parenting space, the steward
+// alone in a roster (a care coordinator's client list). Matches the hub
+// medications policy (owner_or_visibility, adult_values ["family"],
+// write_visibility_scoped, adult-only column writes, steward_writes_only). A
+// medication marked private is its owner's alone. Logging a dose is never
+// gated beyond seeing the medication — that stays every member's own.
+const amManage  = (m) => managesMedications(m, TENANT);
+const canAdd    = (m) => canAddMedication(m, TENANT);
+const canAssign = (m) => canAssignOwner(m, TENANT);
+const IN_SPACE  = TENANT.tenantKind !== "household";
+const IN_ROSTER = IN_SPACE && TENANT.spaceKind === "roster";
 
 // ── State ──────────────────────────────────────────────────────────────────
 let members      = [];
@@ -471,11 +474,11 @@ async function loadMedications() {
   }
   const [active, archived] = await Promise.all([
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
-               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC`),
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
-               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+               days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
@@ -563,7 +566,7 @@ function reminderStatusHtml() {
 // ── Dose toggle ────────────────────────────────────────────────────────────
 window.toggleDose = async function(medId, slot) {
   try { await refreshLocalDay(); }
-  catch (error) { hubAlert(`Couldn’t load today’s doses: ${error.message}`); return; }
+  catch (error) { console.error(error); hubAlert("Couldn’t load today’s doses."); return; }
   const storedKey = existingDoseKey(doses, medId, slot, TODAY);
   const key = `${medId}__${TODAY}__${slot}`;
   const taking = storedKey === null;
@@ -603,7 +606,8 @@ window.toggleDose = async function(medId, slot) {
     } catch (error) {
       delete doses[key];
       render();
-      hubAlert(`Could not mark this dose taken: ${error.message}`);
+      console.error(error);
+      hubAlert("Couldn’t mark the dose taken — try again.");
     }
   } else {
     const storedSlot = slotFromDoseKey(storedKey, TODAY);
@@ -624,14 +628,20 @@ window.toggleDose = async function(medId, slot) {
       if (!changed) {
         doses[storedKey] = previous;
         render();
-        hubAlert("This dose was logged by someone else, so only they (or an adult) can undo it.");
+        // Who may undo a tick, by the hub's rule: whoever logged it, the person
+        // the medication is for, and at home any adult. In a shared space the
+        // steward stands in for the adults; another participant cannot.
+        hubAlert(IN_SPACE
+          ? "Someone else logged this dose. Only they, the person this medication is for, or the steward can undo it."
+          : "Someone else logged this dose. Only they, the person this medication is for, or an adult can undo it.");
         return;
       }
       await loadDoses();
     } catch (error) {
       doses[storedKey] = previous;
       render();
-      hubAlert(`Could not undo this dose: ${error.message}`);
+      console.error(error);
+      hubAlert("Couldn’t undo the dose — try again.");
     }
   }
   render();
@@ -792,6 +802,11 @@ window.submitMedication = async function(existingId) {
   const buddyMemberIds = normalizeMemberIds(
     [...document.querySelectorAll(".f-buddy-member:checked")].map(el => el.value),
   );
+  // Only the person a medication is for keeps it private; one added for
+  // someone else is shared, so the adults who added it can keep it.
+  const visibility = canChooseVisibility(memberId, ME)
+    && document.getElementById("f-visibility")?.value === VISIBILITY_PRIVATE
+    ? VISIBILITY_PRIVATE : VISIBILITY_FAMILY;
 
   const now = new Date().toISOString();
 
@@ -803,7 +818,7 @@ window.submitMedication = async function(existingId) {
       medications[idx] = { ...medications[idx], name, dosage, notes,
         reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
         every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds };
+        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility };
     }
     closeModal();
     render();
@@ -812,10 +827,10 @@ window.submitMedication = async function(existingId) {
         `UPDATE app_medication_tracker__medications
             SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
                 days_mask=?, every_n_days=?, started_on=?, ends_on=?,
-                remind_member_ids=?, buddy_member_ids=?
+                remind_member_ids=?, buddy_member_ids=?, visibility=?
          WHERE id=?`,
         [name, dosage, notes, timesJson, remindersOn, daysMask, everyNDays,
-          startedOn, endsOn, remindMemberIds, buddyMemberIds, existingId]
+          startedOn, endsOn, remindMemberIds, buddyMemberIds, visibility, existingId]
       );
       // The re-read puts back what is stored when the hub changed no row.
       await Promise.all([loadMedications(), loadReminderStatus()]);
@@ -824,7 +839,8 @@ window.submitMedication = async function(existingId) {
     } catch (error) {
       if (idx !== -1 && previous) medications[idx] = previous;
       render();
-      hubAlert(`Could not save this medication: ${error.message}`);
+      console.error(error);
+      hubAlert("Couldn’t save the medication — try again.");
     }
   } else {
     // Optimistic: append new med
@@ -832,7 +848,7 @@ window.submitMedication = async function(existingId) {
     medications.push({ id, member_id: memberId, name, dosage, notes,
       reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
       every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
+      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility,
       archived: 0, created_at: now });
     closeModal();
     render();
@@ -841,17 +857,18 @@ window.submitMedication = async function(existingId) {
         `INSERT INTO app_medication_tracker__medications
            (id, member_id, name, dosage, notes, reminder_times, reminders_on,
             days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
-            archived, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+            visibility, archived, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
         [id, memberId, name, dosage, notes, timesJson, remindersOn,
-          daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds, now]
+          daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds, visibility, now]
       );
       await Promise.all([loadMedications(), loadReminderStatus()]);
       render();
     } catch (error) {
       medications = medications.filter(m => m.id !== id);
       render();
-      hubAlert(`Could not add this medication: ${error.message}`);
+      console.error(error);
+      hubAlert("Couldn’t add the medication — try again.");
     }
   }
 };
@@ -898,7 +915,8 @@ window.archiveMedication = async function(id, archive) {
     medications = previousMedications;
     archivedMeds = previousArchived;
     render();
-    hubAlert(`Could not ${label} this medication: ${error.message}`);
+    console.error(error);
+    hubAlert(`Couldn’t ${label} the medication — try again.`);
   }
 };
 
@@ -914,12 +932,33 @@ function openModal(html) {
 function closeModal() { modalEl?.remove(); modalEl = null; }
 window.closeModal = closeModal;
 
+// Who else sees the medication. Offered only while it is for the person
+// filling in the form (canChooseVisibility); hidden, it saves as shared.
+function visibilityGroupHtml(ownerId, me, current = VISIBILITY_FAMILY) {
+  const shown = canChooseVisibility(ownerId, me);
+  const others = IN_SPACE ? "Every adult in this space" : "Every adult at home";
+  return `
+    <div class="form-group" id="f-visibility-group" ${shown ? "" : "hidden"}>
+      <label>Who can see it</label>
+      <select id="f-visibility" data-testid="f-visibility">
+        <option value="${VISIBILITY_FAMILY}" ${current === VISIBILITY_PRIVATE ? "" : "selected"}>${others}</option>
+        <option value="${VISIBILITY_PRIVATE}" ${current === VISIBILITY_PRIVATE ? "selected" : ""}>Only me</option>
+      </select>
+    </div>`;
+}
+
+window.ownerChanged = function(ownerId) {
+  const group = document.getElementById("f-visibility-group");
+  if (group) group.hidden = !canChooseVisibility(ownerId, ME);
+};
+
 window.openAddModal = function() {
   const me = myMember();
   if (!canAdd(me)) return;
-  // The hub stamps a row to its author unless the author manages medications,
-  // so only whoever manages is offered other members.
-  const adultMembers = amManage(me) ? members : [me].filter(Boolean);
+  // The hub keeps the owner the form names only where this member supervises
+  // (canAssignOwner); elsewhere it stamps the row to its author, so the form
+  // offers no one else.
+  const adultMembers = canAssign(me) ? members : [me].filter(Boolean);
 
   const memberOptions = adultMembers
     .map(m => `<option value="${esc(m.id)}" ${m.id === me?.id ? "selected" : ""}>${esc(m.name)}</option>`)
@@ -932,7 +971,7 @@ window.openAddModal = function() {
   const memberRow = adultMembers.length > 1
     ? `<div class="form-group">
         <label>For</label>
-        <select id="f-member">${memberOptions}</select>
+        <select id="f-member" onchange="ownerChanged(this.value)">${memberOptions}</select>
        </div>`
     : `<input type="hidden" id="f-member" value="${esc(me?.id ?? "")}" />`;
 
@@ -951,8 +990,8 @@ window.openAddModal = function() {
       <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
       <textarea id="f-notes" placeholder="e.g. Take with food"></textarea>
     </div>
+    ${visibilityGroupHtml(me?.id ?? "", me)}
     ${scheduleEditor}
-    ${amManage(me) ? "" : `<p class="scope-note" data-testid="add-own-note">Once added, only the steward can change or archive this medication, or turn its reminders off.</p>`}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" data-action="save-med">Add Medication</button>
@@ -994,6 +1033,7 @@ window.openEditModal = function(id) {
       <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
       <textarea id="f-notes">${esc(med.notes)}</textarea>
     </div>
+    ${visibilityGroupHtml(med.member_id, me, med.visibility)}
     ${scheduleEditor}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -1037,10 +1077,10 @@ function medRowHtml(med, showEditBtn = false) {
     : "";
   const notMonitored = remindersEnabled(med) && unmonitoredIds().has(String(med.id));
   return `
-    <div class="med-row${med.archived ? " archived-row" : ""}" data-testid="med-row" data-med-id="${esc(med.id)}" data-done="${done ? "yes" : "no"}">
+    <div class="med-row${med.archived ? " archived-row" : ""}" data-testid="med-row" data-med-id="${esc(med.id)}" data-done="${done ? "yes" : "no"}" data-visibility="${isPrivateMedication(med) ? VISIBILITY_PRIVATE : VISIBILITY_FAMILY}">
       <div class="med-row-top">
         <div>
-          <div class="med-name">${esc(med.name)}</div>
+          <div class="med-name">${esc(med.name)}${isPrivateMedication(med) ? ` <span class="archived-badge" data-testid="private-badge">Only you</span>` : ""}</div>
           ${med.dosage ? `<div class="med-dosage">${esc(med.dosage)}</div>` : ""}
           ${med.notes ? `<div class="med-notes">${esc(med.notes)}</div>` : ""}
           ${notMonitored ? `<div class="med-notes"><strong>Reminder not monitored — turn another reminder off or upgrade.</strong></div>` : ""}
@@ -1068,20 +1108,18 @@ function memberSectionHtml(member, meds, title, canEdit) {
   `;
 }
 
-// What an adult who takes part in a shared space gets in place of the Manage
-// tab: a way to add a medication for themself, and who to ask for the rest.
+// What a participant of a roster gets in place of the Manage tab: who keeps
+// the list. Every other adult manages medications themselves.
 function participantFooterHtml(me) {
-  if (!IN_SPACE || amManage(me)) return "";
-  const addBtn = canAdd(me)
-    ? `<div class="filter-bar" style="margin:14px 0 0"><button class="btn btn-primary btn-sm" data-testid="add-own-med" onclick="openAddModal()">+ Add Medication</button></div>`
-    : "";
-  return `${addBtn}<p class="scope-note" data-testid="steward-note">In a shared space, the steward edits and archives medications.</p>`;
+  if (!IN_ROSTER || amManage(me)) return "";
+  return `<p class="scope-note" data-testid="steward-note">In this space, the steward keeps the medication list.</p>`;
 }
 
 function renderToday(me, visible) {
   if (!visible.length) {
-    const hint = amManage(me) || canAdd(me) ? "Add one below."
-      : IN_SPACE ? "Ask the steward to add medications."
+    const hint = amManage(me) ? "Add one below."
+      : IN_ROSTER ? "Ask the steward to add medications."
+      : IN_SPACE ? "Ask an adult to add medications."
       : "Ask a parent to add medications.";
     return `<div class="empty">No medications to track today.<br>${hint}</div>${participantFooterHtml(me)}`;
   }
@@ -1136,6 +1174,7 @@ function renderManage(me) {
     const canEdit = canEditMedication(med, me, members, TENANT);
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
     const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
+    const privateNote = isPrivateMedication(med) ? " · <em>only you</em>" : "";
     const editBtn = canEdit
       ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit" aria-label="Edit">${glyph("pencil")}</button>`
       : "";
@@ -1144,7 +1183,7 @@ function renderManage(me) {
         ${avatarHtml(owner, 30)}
         <div class="manage-info">
           <div class="name">${esc(med.name)}${med.dosage ? ` <span style="font-weight:400;color:var(--muted)">${esc(med.dosage)}</span>` : ""}</div>
-          <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${remindersOff}${med.archived ? " · <em>archived</em>" : ""}</div>
+          <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${remindersOff}${privateNote}${med.archived ? " · <em>archived</em>" : ""}</div>
         </div>
         ${med.archived ? `<span class="archived-badge">Archived</span>` : ""}
         ${editBtn}

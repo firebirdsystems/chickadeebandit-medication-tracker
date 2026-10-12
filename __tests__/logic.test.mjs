@@ -4,7 +4,7 @@ import {
   SLOT_LABELS, ALL_SLOTS,
   parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
-  managesMedications, canAddMedication,
+  managesMedications, canAddMedication, canAssignOwner, canChooseVisibility, isPrivateMedication,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
@@ -161,10 +161,10 @@ describe("canEditMedication", () => {
     expect(canEditMedication(m, MEMBERS[2], MEMBERS)).toBe(false);
   });
 
-  it("a shared space's steward can edit another adult's medication; a participant cannot", () => {
-    const m = med({ member_id: "adult-2" });
-    expect(canEditMedication(m, MEMBERS[0], MEMBERS, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
-    expect(canEditMedication(m, MEMBERS[0], MEMBERS, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(false);
+  it("in a shared space every adult edits another adult's shared medication", () => {
+    const space = { tenantKind: "shared_space", spaceKind: "general" };
+    expect(canEditMedication(med({ member_id: "adult-2" }), MEMBERS[0], MEMBERS, { ...space, isAdmin: true })).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-2" }), MEMBERS[0], MEMBERS, { ...space, isAdmin: false })).toBe(true);
   });
 });
 
@@ -362,14 +362,34 @@ describe("managesMedications", () => {
     expect(managesMedications(child)).toBe(false);
     expect(managesMedications(null)).toBe(false);
   });
-  it("is not an adult who takes part in a shared space", () => {
-    expect(managesMedications(adult, { ...space, isAdmin: false })).toBe(false);
-    expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: false })).toBe(false);
+  it("is every adult who takes part in a general or co-parenting space", () => {
+    expect(managesMedications(adult, { ...space, isAdmin: false })).toBe(true);
+    expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: false })).toBe(true);
+    expect(managesMedications(child, { ...space, isAdmin: false })).toBe(false);
   });
-  it("is the steward of a general, roster or co-parenting space", () => {
-    for (const spaceKind of ["general", "roster", "coparenting"]) {
-      expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind, isAdmin: true })).toBe(true);
-    }
+  it("is the steward alone in a roster", () => {
+    expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: false })).toBe(false);
+    expect(managesMedications(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
+  });
+  it("never includes a guest", () => {
+    expect(managesMedications({ id: "g", name: "Aide", role: "guest" })).toBe(false);
+    expect(managesMedications({ id: "g", name: "Aide", role: "guest" }, { ...space, isAdmin: false })).toBe(false);
+  });
+});
+
+describe("canAssignOwner", () => {
+  const adult = MEMBERS[0], child = MEMBERS[2];
+
+  it("is every adult at home, where the hub keeps the owner an adult names", () => {
+    expect(canAssignOwner(adult)).toBe(true);
+    expect(canAssignOwner(child)).toBe(false);
+    expect(canAssignOwner(null)).toBe(false);
+  });
+  it("is the steward of a general or roster space, and nobody in a co-parenting one", () => {
+    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: true })).toBe(true);
+    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
+    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(false);
+    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true })).toBe(false);
   });
 });
 
@@ -381,7 +401,7 @@ describe("canAddMedication", () => {
     expect(canAddMedication(child)).toBe(false);
     expect(canAddMedication(null)).toBe(false);
   });
-  it("lets an adult who takes part in a general or co-parenting space add their own", () => {
+  it("lets every adult who takes part in a general or co-parenting space add", () => {
     expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(true);
     expect(canAddMedication(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: false })).toBe(true);
   });
@@ -394,24 +414,58 @@ describe("canAddMedication", () => {
   });
 });
 
+describe("private medications", () => {
+  const alex = MEMBERS[0], sam = MEMBERS[1], child = MEMBERS[2];
+
+  it("only an explicit private value counts; rows from before the column are shared", () => {
+    expect(isPrivateMedication(med({ visibility: "private" }))).toBe(true);
+    expect(isPrivateMedication(med({ visibility: "family" }))).toBe(false);
+    expect(isPrivateMedication(med())).toBe(false);
+  });
+  it("hides another adult's private medication but never their shared one", () => {
+    expect(canViewMedication(med({ member_id: "adult-2", visibility: "private" }), alex, MEMBERS)).toBe(false);
+    expect(canViewMedication(med({ member_id: "adult-2", visibility: "family" }), alex, MEMBERS)).toBe(true);
+    expect(canViewMedication(med({ member_id: "adult-2", visibility: "private" }), sam, MEMBERS)).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-1", visibility: "private" }), sam, MEMBERS,
+      { tenantKind: "shared_space", spaceKind: "general" })).toBe(false);
+  });
+  it("is chosen only by the person the medication is for", () => {
+    expect(canChooseVisibility("adult-1", alex)).toBe(true);
+    expect(canChooseVisibility("kid-1", alex)).toBe(false);
+    expect(canChooseVisibility("adult-1", null)).toBe(false);
+    expect(canChooseVisibility("", alex)).toBe(false);
+  });
+  it("a child reads their own medication whatever its visibility, and nothing else", () => {
+    expect(canViewMedication(med({ member_id: "kid-1", visibility: "private" }), child, MEMBERS)).toBe(true);
+    expect(canViewMedication(med({ member_id: "kid-2" }), child, MEMBERS)).toBe(false);
+  });
+});
+
 describe("medication gates in a shared space", () => {
   const adult = MEMBERS[0];
   const participant = { tenantKind: "shared_space", spaceKind: "general", isAdmin: false };
   const steward = { tenantKind: "shared_space", spaceKind: "general", isAdmin: true };
+  const rosterParticipant = { tenantKind: "shared_space", spaceKind: "roster", isAdmin: false };
 
-  it("a participant sees only their own medications and edits none", () => {
+  it("a participant adult sees and edits every shared medication, another adult's included", () => {
     expect(canViewMedication(med({ member_id: "adult-1" }), adult, MEMBERS, participant)).toBe(true);
-    expect(canViewMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(false);
-    expect(canManageMedications(adult, participant)).toBe(false);
-    expect(canEditMedication(med({ member_id: "adult-1" }), adult, MEMBERS, participant)).toBe(false);
-    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(false);
+    expect(canViewMedication(med({ member_id: "adult-2" }), adult, MEMBERS, participant)).toBe(true);
+    expect(canViewMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(true);
+    expect(canManageMedications(adult, participant)).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-2" }), adult, MEMBERS, participant)).toBe(true);
+    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, participant)).toBe(true);
+    expect(canEditMedication(med({ member_id: "adult-2", visibility: "private" }), adult, MEMBERS, participant)).toBe(false);
   });
-  it("the steward sees and edits every medication, another adult's included", () => {
+  it("the steward is one adult among them, with no reach into a private medication", () => {
     expect(canViewMedication(med({ member_id: "adult-2" }), adult, MEMBERS, steward)).toBe(true);
-    expect(canManageMedications(adult, steward)).toBe(true);
-    expect(canEditMedication(med({ member_id: "adult-1" }), adult, MEMBERS, steward)).toBe(true);
-    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, steward)).toBe(true);
     expect(canEditMedication(med({ member_id: "adult-2" }), adult, MEMBERS, steward)).toBe(true);
+    expect(canViewMedication(med({ member_id: "adult-2", visibility: "private" }), adult, MEMBERS, steward)).toBe(false);
+  });
+  it("a roster participant reads their own medications only and edits none", () => {
+    expect(canViewMedication(med({ member_id: "adult-1" }), adult, MEMBERS, rosterParticipant)).toBe(true);
+    expect(canViewMedication(med({ member_id: "adult-2" }), adult, MEMBERS, rosterParticipant)).toBe(false);
+    expect(canManageMedications(adult, rosterParticipant)).toBe(false);
+    expect(canEditMedication(med({ member_id: "adult-1" }), adult, MEMBERS, rosterParticipant)).toBe(false);
   });
 });
 

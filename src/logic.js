@@ -117,37 +117,66 @@ export function parseJsonArray(value) {
 
 const isAdultMember = m => !!m && (m.role === "adult" || m.role === "admin");
 
-/**
- * Whether a member manages medications: reads everyone's, adds for anyone,
- * edits and archives. Mirrors the hub's rule for the medications table
- * (owner_only with adults_bypass, member_can_update: false and
- * steward_writes_only): any adult in a household, and only the steward in a
- * shared space of any kind. Anyone else reads their own medications alone and
- * is refused every edit, their own included.
- */
-export function managesMedications(member, { tenantKind = "household", isAdmin = false } = {}) {
-  return tenantKind === "household" ? isAdultMember(member) : isAdmin === true;
+/** The two values of a medication's `visibility` column. */
+export const VISIBILITY_FAMILY = "family";
+export const VISIBILITY_PRIVATE = "private";
+
+/** A medication kept to the person it is for. Rows written before the column
+ * existed carry no value and were always shared, so only an explicit
+ * "private" counts. */
+export function isPrivateMedication(med) {
+  return med?.visibility === VISIBILITY_PRIVATE;
 }
 
 /**
- * Whether a member may add a medication at all. Whoever manages may add for
- * anyone. An adult who takes part in a shared space may add one for themself
- * (the hub stamps the row to them) unless the space is a roster, where every
- * write belongs to the steward. A child never adds.
+ * Whether a member manages medications: reads every shared ("family") one,
+ * adds, edits and archives. Mirrors the hub's rule for the medications table
+ * (owner_or_visibility with adult_values ["family"], write_visibility_scoped
+ * and adult-only column writes): every adult in a household, every adult who
+ * takes part in a general or co-parenting space, and the steward alone in a
+ * roster, where a participant reads their own rows only. A child or a guest
+ * reads their own medications and ticks their doses, nothing more.
  */
+export function managesMedications(member, { tenantKind = "household", spaceKind = null, isAdmin = false } = {}) {
+  if (!isAdultMember(member)) return false;
+  if (tenantKind === "household") return true;
+  return spaceKind !== "roster" || isAdmin === true;
+}
+
+/**
+ * Whether the member may choose who a medication is for. The hub keeps the
+ * owner an adult names only where supervision is theirs (supervisor_assigns_owner):
+ * every adult at home, the steward of a general or roster space. Everywhere
+ * else it stamps the row to its author, so the form offers no choice rather
+ * than one the hub would silently overrule.
+ */
+export function canAssignOwner(member, { tenantKind = "household", spaceKind = null, isAdmin = false } = {}) {
+  if (!isAdultMember(member)) return false;
+  if (tenantKind === "household") return true;
+  return isAdmin === true && spaceKind !== "coparenting";
+}
+
+/** Whether a member may add a medication at all: whoever manages them. */
 export function canAddMedication(member, tenant = {}) {
-  if (managesMedications(member, tenant)) return true;
-  const { tenantKind = "household", spaceKind = null } = tenant;
-  return tenantKind !== "household" && spaceKind !== "roster" && isAdultMember(member);
+  return managesMedications(member, tenant);
+}
+
+/** Only the person a medication is for decides who else sees it. A medication
+ * added for someone else is shared with every adult, which is what makes it
+ * manageable by the people who added it. */
+export function canChooseVisibility(ownerId, me) {
+  return !!me && !!ownerId && ownerId === me.id;
 }
 
 /**
- * Returns true if the current user can see a medication: whoever manages
- * medications sees every one, everyone else only their own.
+ * Returns true if the current user can see a medication: their own always,
+ * and every shared one when they manage medications. A private medication is
+ * its owner's alone.
  */
 export function canViewMedication(med, me, members, tenant) {
   if (!me) return false;
-  return managesMedications(me, tenant) || med.member_id === me.id;
+  if (med.member_id === me.id) return true;
+  return managesMedications(me, tenant) && !isPrivateMedication(med);
 }
 
 /**
@@ -160,19 +189,19 @@ export function canManageMedications(me, tenant) {
 }
 
 /**
- * Returns true if the current user can edit a specific medication. In a
- * household, whoever manages edits their own and children's, and leaves
- * another adult's alone. In a shared space the steward edits anyone's: the
- * members there are mostly adults, and keeping their medications is the
- * steward's job.
+ * Returns true if the current user can edit a specific medication. Whoever
+ * manages edits what they can see, with one courtesy at home: another adult's
+ * medication is left to that adult. In a shared space every adult who sees a
+ * medication keeps it, which is the point of sharing a parent's list between
+ * siblings.
  */
 export function canEditMedication(med, me, members, tenant) {
   if (!canManageMedications(me, tenant)) return false;
+  if (!canViewMedication(med, me, members, tenant)) return false;
   if (med.member_id === me.id) return true;
   if ((tenant?.tenantKind ?? "household") !== "household") return true;
   const owner = members.find(m => m.id === med.member_id);
-  const ownerIsAdult = !!owner && (owner.role === "adult" || owner.role === "admin");
-  return !ownerIsAdult; // can edit children's meds, not other adults'
+  return !isAdultMember(owner); // can edit children's meds, not other adults'
 }
 
 /**

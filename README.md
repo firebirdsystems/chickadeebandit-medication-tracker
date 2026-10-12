@@ -8,8 +8,14 @@ Track daily medications for every family member. Check off doses as they're take
 
 - Daily medication schedules per family member.
 - Check off doses as they are taken.
-- Adults see all children's schedules.
-- Each adult manages the sharing of their own medications.
+- Every adult sees every shared medication, in the household or in a shared space, and can tick
+  its doses, change it or archive it. A child sees and ticks only their own.
+- A medication is shared with the other adults unless the person it is for marks it "Only me". A
+  private medication, and its dose history, is theirs alone.
+- A tick is undone by whoever made it or by the person the medication is for; at home any adult can
+  undo one. Who a medication is for never changes once it is added.
+- Adults add medications for themselves and for the children. In a shared space, every adult adds
+  their own, and the steward adds for anyone; in a roster, the steward keeps the whole list.
 
 ## Printed lists
 
@@ -24,8 +30,8 @@ The Manage tab offers two documents, rendered by the hub from the manifest's `re
   dose and says so.
 
 Each opens ready to print or save as a PDF, or downloads as CSV. A document holds the medications
-the person asking can see in the app: the whole household's for an adult, their own for anyone
-else, and in a shared space everyone's for the steward only.
+the person asking can see in the app: every shared one for an adult, their own for anyone else.
+A medication marked "Only me" appears on its owner's documents and no one else's.
 
 ## Install
 

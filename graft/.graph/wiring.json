@@ -1,0 +1,2111 @@
+{
+  "meta": {
+    "version": 1,
+    "nodeCount": 69,
+    "edgeCount": 185,
+    "languages": [
+      "javascript"
+    ],
+    "scopes": [
+      {
+        "prefix": "",
+        "label": "",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "__tests__/logic.test.mjs",
+      "name": "logic.test.mjs",
+      "kind": "file",
+      "path": "__tests__/logic.test.mjs",
+      "span": "L1-L574",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "32826cbba1ed7e33f51dd068a3e5eeea8ffd52d5215290f751f418c5a69d30b1",
+      "chars": 25258,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/logic.test.mjs#med",
+      "name": "med",
+      "kind": "function",
+      "path": "__tests__/logic.test.mjs",
+      "span": "L25-L37",
+      "signature": "function med(overrides = {})",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "e850789fd0f1ad7785692970d582eb87204009a412832ec47fc57042e2d5beae",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/manifest.test.mjs",
+      "name": "manifest.test.mjs",
+      "kind": "file",
+      "path": "__tests__/manifest.test.mjs",
+      "span": "L1-L150",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "6bd18241cd5e8d90d2e0512982c54b874577d7489574a58339285c84a4a3f8c0",
+      "chars": 6188,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/migration.test.mjs",
+      "name": "migration.test.mjs",
+      "kind": "file",
+      "path": "__tests__/migration.test.mjs",
+      "span": "L1-L126",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "ffb8272df25c326cae0fea92125aebfc619a5875fcf09343d46936cee82d6666",
+      "chars": 5213,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/migration.test.mjs#database",
+      "name": "database",
+      "kind": "function",
+      "path": "__tests__/migration.test.mjs",
+      "span": "L12-L16",
+      "signature": "function database()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "d8b56e480e5a27fbc53251fbf132b098f80b59d2a68acb77ffe96b51ff117c8c",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/migration.test.mjs#migration",
+      "name": "migration",
+      "kind": "function",
+      "path": "__tests__/migration.test.mjs",
+      "span": "L22-L24",
+      "signature": "function migration(name)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "a74d5121b34120207804bb65c0fbc209b0ed4d7f60f639e3dfc50944dacf0670",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/migration.test.mjs#rows",
+      "name": "rows",
+      "kind": "function",
+      "path": "__tests__/migration.test.mjs",
+      "span": "L26-L29",
+      "signature": "function rows(db, query)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "8327b648964efc036616421a666485ae074532c89980f5cc0d085f6030377f4c",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/migration.test.mjs#sql",
+      "name": "sql",
+      "kind": "function",
+      "path": "__tests__/migration.test.mjs",
+      "span": "L18-L20",
+      "signature": "function sql(db, text)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "1192a005d42105ce7b86852f180497bf109329ba89f9ab65bd8af0866b8545f2",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/preload.test.mjs",
+      "name": "preload.test.mjs",
+      "kind": "file",
+      "path": "__tests__/preload.test.mjs",
+      "span": "L1-L36",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "1c11bb93d9d9db1cbc6b32ebdd6d46297d4930556a36538e4063b710ae29661c",
+      "chars": 1792,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/preload.test.mjs#norm",
+      "name": "norm",
+      "kind": "function",
+      "path": "__tests__/preload.test.mjs",
+      "span": "L9-L9",
+      "signature": "norm = (s)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "4808eb4cf0685c1da384d060520695bf84d0b64a4929fd6d9196283b27f8dda2",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs",
+      "name": "request-helper.test.mjs",
+      "kind": "file",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L1-L99",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "ca5a2a056a596aad73e9adc1428be9248205d454da81373cb58b5836d49d833b",
+      "chars": 4574,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs#call",
+      "name": "call",
+      "kind": "function",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L61-L72",
+      "signature": "async function call(helper, kind)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "874a4a60dc29e11814454622322833bf06fdaf3da41e84abfeb9f419fe86d072",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs#call.error",
+      "name": "error",
+      "kind": "method",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L65-L65",
+      "signature": "error()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "472425dbd5268c7778ac614683efd126609b1c401c60cdcdf788f0c3e2e25473",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs#call.log",
+      "name": "log",
+      "kind": "method",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L65-L65",
+      "signature": "log()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "c265c298434b33b2f28eae44b7ed8c754f31f9a367744b389ff20ec210780c22",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs#call.warn",
+      "name": "warn",
+      "kind": "method",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L65-L65",
+      "signature": "warn()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "b4e34d3794b54f19a9453c0f67c2f9d1718b8f90cf2ca684d43748d162c7eea4",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/request-helper.test.mjs#dbHelpers",
+      "name": "dbHelpers",
+      "kind": "function",
+      "path": "__tests__/request-helper.test.mjs",
+      "span": "L26-L52",
+      "signature": "function dbHelpers(source)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "c51ee3cf2d130e61a5cecba7a8f9a03b12bc87bf714fd1c03aa10452a20c668a",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "__tests__/ui-contract.test.mjs",
+      "name": "ui-contract.test.mjs",
+      "kind": "file",
+      "path": "__tests__/ui-contract.test.mjs",
+      "span": "L1-L64",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "f176651e7ea17096bb05dfddddbe1018603b6d11a60be076acaa5c18d986067d",
+      "chars": 3179,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs",
+      "name": "build.mjs",
+      "kind": "file",
+      "path": "build.mjs",
+      "span": "L1-L295",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "6582eb7309803913cb9f4c41d8747e0d75333ca1fa19ec7b26e1ab55beb1dd2b",
+      "chars": 12827,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs#readDir",
+      "name": "readDir",
+      "kind": "function",
+      "path": "build.mjs",
+      "span": "L31-L39",
+      "signature": "function readDir(dir, base = \"\")",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "18909292c8f4d379b4d99a552ec20638de1d3971cb91da5f5cc8d7903d2ffe51",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs#surfaceErrors",
+      "name": "surfaceErrors",
+      "kind": "function",
+      "path": "build.mjs",
+      "span": "L153-L248",
+      "signature": "function surfaceErrors(m)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "27a231a58d0ab0b647d8339b27b067e7c302c978c6fbeae5297c0d3473dafbe5",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs#surfaceErrors.aliasesOf",
+      "name": "aliasesOf",
+      "kind": "function",
+      "path": "build.mjs",
+      "span": "L158-L178",
+      "signature": "aliasesOf = (q)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "bf84d6f356582aa12e70d4c3f4a00a746d0588fc654ab3b45322c5307313ba1b",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs#surfaceErrors.checkQuery",
+      "name": "checkQuery",
+      "kind": "function",
+      "path": "build.mjs",
+      "span": "L181-L187",
+      "signature": "checkQuery = (q, where)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "debe0f1b6d72d9201f34d999fef531c1765b794275de84d3ecf493005dc2791a",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "build.mjs#surfaceErrors.limitOf",
+      "name": "limitOf",
+      "kind": "function",
+      "path": "build.mjs",
+      "span": "L179-L179",
+      "signature": "limitOf = (q)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "62816b383b7cc339c7755930395addcb62043759917ebf17a1b4cd9870ab0a87",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev-server.mjs",
+      "name": "dev-server.mjs",
+      "kind": "file",
+      "path": "dev-server.mjs",
+      "span": "L1-L65",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "fa36bc73fcfac88d2535b5ffa92126cc2bbbf035ceca5fc88dd48575c6b32c2d",
+      "chars": 1709,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev.mjs",
+      "name": "dev.mjs",
+      "kind": "file",
+      "path": "dev.mjs",
+      "span": "L1-L107",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "5deae6045a91fa1db0125f3bfb19df83c30e4f59b033aa4f155a3772604ebe23",
+      "chars": 3434,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev.mjs#ensureSdk",
+      "name": "ensureSdk",
+      "kind": "function",
+      "path": "dev.mjs",
+      "span": "L68-L89",
+      "signature": "async function ensureSdk()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "3f99af637397a911e5fb1d84e4ca2dd927da506f24148952981c352c1cd3e472",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev.mjs#fetchSdk",
+      "name": "fetchSdk",
+      "kind": "function",
+      "path": "dev.mjs",
+      "span": "L57-L66",
+      "signature": "function fetchSdk()",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "7ec8e9c5632bc1ad3d6cb27fc5a2af654f9c91da65af1fc08169d8c7273c9a36",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev.mjs#mime",
+      "name": "mime",
+      "kind": "function",
+      "path": "dev.mjs",
+      "span": "L42-L44",
+      "signature": "function mime(filepath)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "f00f2149fd7dff6d81fa07e2f3e4b14e265fd0ee8a5deb6e57fc051bcfe87419",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "dev.mjs#serve",
+      "name": "serve",
+      "kind": "function",
+      "path": "dev.mjs",
+      "span": "L46-L55",
+      "signature": "function serve(res, filepath)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "52e06b87ecc7af284739a8fd6dc8d250f701005853f2be1c45e9d1b4ac67f6ba",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js",
+      "name": "logic.js",
+      "kind": "file",
+      "path": "src/logic.js",
+      "span": "L1-L376",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "35e9b93ce68e7bcfd250f34bae814e72791069b5476a8523f98ebdb11e9cb7a2",
+      "chars": 15030,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#allDosesComplete",
+      "name": "allDosesComplete",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L260-L263",
+      "signature": "function allDosesComplete(med, doses, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "1f1908ac34d2049ffbac0678cf0ab8136fe86cb0fb2656fc5fdbbbd1d97b3ca6",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canAddMedication",
+      "name": "canAddMedication",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L160-L162",
+      "signature": "function canAddMedication(member, tenant = {})",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "49f0f742d1f343972fb350c107f822ec88bd4078dc9ae99df06a14d18ceb0b7e",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canAssignOwner",
+      "name": "canAssignOwner",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L153-L157",
+      "signature": "function canAssignOwner(member, { tenantKind = \"household\", spaceKind = null, isAdmin = false } = {})",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "48503b4c17d7dc3f61fea6787750e17ce9367bd04bcdca7fb9269f493c76ae87",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canChooseVisibility",
+      "name": "canChooseVisibility",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L167-L169",
+      "signature": "function canChooseVisibility(ownerId, me)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "701fa78b8b842ce21ea6268f3d9626dc3f3cf94b8afe5ec41901dc1ca59b59d1",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canEditMedication",
+      "name": "canEditMedication",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L198-L205",
+      "signature": "function canEditMedication(med, me, members, tenant)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "81e6ef71913a0ab462096efc8e26f6c690d8e011fd65fb448342f92a24203493",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canManageMedications",
+      "name": "canManageMedications",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L186-L189",
+      "signature": "function canManageMedications(me, tenant)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "64a671000fcc2c398fd717c2274387175ecab205d9d1d3232bafaaab794ba6df",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#canViewMedication",
+      "name": "canViewMedication",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L176-L180",
+      "signature": "function canViewMedication(med, me, members, tenant)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "f97a56bace43c7e303bb6905f04ee1fb87ffc2078f080d1d0e21fc36cec2699a",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#daysBefore",
+      "name": "daysBefore",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L348-L353",
+      "signature": "function daysBefore(todayStr, days)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "982a7ebc47068f5ac4a78633a735000921c63f52b7e960c04378281723e31a42",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#daysBetween",
+      "name": "daysBetween",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L266-L273",
+      "signature": "function daysBetween(from, to)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "37135c92665cd7728f219fe8ba9fd7165d87076404b5d31cb745ff5bd0b1bbc1",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#daysBetween.utc",
+      "name": "utc",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L267-L270",
+      "signature": "utc = (value)",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "c86343f60c8e45e95adc52b87bd4990d1f855b699f892813c2fd1b875b7ce072",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#existingDoseKey",
+      "name": "existingDoseKey",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L218-L227",
+      "signature": "function existingDoseKey(doses, medId, slot, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "3bbbf74026d084644797134819cfd28e1b5c5c9bc981e0908ddd97215b3e919f",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#formatTime",
+      "name": "formatTime",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L43-L49",
+      "signature": "function formatTime(hhmm)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "ebf75ec2c6065f3e2f48416c8c5220e925500a7c84caecf289a5030f432c42ee",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#groupByMember",
+      "name": "groupByMember",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L318-L325",
+      "signature": "function groupByMember(medications)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "db6dc5ea963ac8ac1f9e846c502d18dd5852cf1fa73058d25782766c670caa93",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#isAdultMember",
+      "name": "isAdultMember",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L118-L118",
+      "signature": "isAdultMember = m",
+      "exported": false,
+      "origin": "ast",
+      "body_hash": "3bd8271e6120479132442caa5ff083de9cd994a719ee4119314f049311d06061",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#isClockTime",
+      "name": "isClockTime",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L38-L40",
+      "signature": "function isClockTime(value)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "b6c305a18f2e387da05cf2d756c272d2d4bbbe62bb1c9c159e9f74df11deea99",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#isDoseTaken",
+      "name": "isDoseTaken",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L211-L213",
+      "signature": "function isDoseTaken(doses, medId, slot, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "f03218ae8e2e7fee32b906b8641e4fa05eed35373e380fb3b824f5c2432e31ca",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#isDueOn",
+      "name": "isDueOn",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L282-L301",
+      "signature": "function isDueOn(med, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "86dded362468177a4e0c556ea4ee080d05a0e385c82dbbbbf7f9b9bc4457ac7c",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#isPrivateMedication",
+      "name": "isPrivateMedication",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L127-L129",
+      "signature": "function isPrivateMedication(med)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "f26d26e42ccdafbc0dd900d4e01910b71a63331122e13e802cfbb323bcb72bcf",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#managesMedications",
+      "name": "managesMedications",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L140-L144",
+      "signature": "function managesMedications(member, { tenantKind = \"household\", spaceKind = null, isAdmin = false } = {})",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "8b967c189c90415df20e0b2658c8a387ce504ea1eced58d88b7f280fbdbbc13a",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#medicationTimes",
+      "name": "medicationTimes",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L89-L96",
+      "signature": "function medicationTimes(med)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "18da52107b9d0e1ff24a24be4bfe0485fc9d8a728a33d48041a85751cab69126",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#nextTodayKey",
+      "name": "nextTodayKey",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L247-L249",
+      "signature": "function nextTodayKey(current, today)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "fefdc0fd630c7c43119fe05665c1f370f71a12ca4525650f8a7261da6234ab3f",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#normalizeDaysMask",
+      "name": "normalizeDaysMask",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L67-L72",
+      "signature": "function normalizeDaysMask(days)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "bb601795c81f088de4cb04224d33ba766b334fdaec4b2501e7352fbb81688d97",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#normalizeMemberIds",
+      "name": "normalizeMemberIds",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L76-L79",
+      "signature": "function normalizeMemberIds(ids)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "da1065f46c8d51c7741566c4e0bdeb488c63b58aba015055fbe138b7381eb033",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#normalizeTimes",
+      "name": "normalizeTimes",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L62-L64",
+      "signature": "function normalizeTimes(times)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "f06466ffcb5aa6f5847b71126715e6a58b8f5b2e229cda465204002a72980f42",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#parseJsonArray",
+      "name": "parseJsonArray",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L113-L116",
+      "signature": "function parseJsonArray(value)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "3416f39d32360c299c5e09bf69c3c06dc0427892edd8837a39578fce7e78ec07",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#remindersEnabled",
+      "name": "remindersEnabled",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L99-L101",
+      "signature": "function remindersEnabled(med)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "ea16ac87c70977a82f58648d4485790b69b2f435dbfe5eda09fc7017a51a1f42",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#reportRange",
+      "name": "reportRange",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L362-L366",
+      "signature": "function reportRange(id, todayStr, days)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "7bc02495cd22b73e31bd89c0225d853c58fa67f3a38f888ad37dbeabf63bab13",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#reportUrl",
+      "name": "reportUrl",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L369-L375",
+      "signature": "function reportUrl(reportsUrl, id, format, from, to, base)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "498bc868996df67bad60e68d93305b330e8d4fc8238ec1ca33b2310c778363d7",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#searchableFields",
+      "name": "searchableFields",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L333-L335",
+      "signature": "function searchableFields(item)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "7b9d1a925bc600350774a3e4cf8b21989003a8c2aa351cdaa02d87b0eb50376c",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#showsToday",
+      "name": "showsToday",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L308-L312",
+      "signature": "function showsToday(med, doses, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "a2ca4f2f8bdd275b1baa6a16acb0b6701e1bfa656780a14c47a418f976d387a9",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#slotFromDoseKey",
+      "name": "slotFromDoseKey",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L231-L235",
+      "signature": "function slotFromDoseKey(key, date)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "af11dec2d416a461c06a4d5d5a7d0df19df1cbb731c9c0d54270ec66e104826e",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#timeOfDayLabel",
+      "name": "timeOfDayLabel",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L52-L59",
+      "signature": "function timeOfDayLabel(hhmm)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "45d1e7f9aa7e165e3474e3c4c191f598cac60f92a714c393a3253054ec2c7a0f",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/logic.js#withArchivedState",
+      "name": "withArchivedState",
+      "kind": "function",
+      "path": "src/logic.js",
+      "span": "L105-L107",
+      "signature": "function withArchivedState(med, archived)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "9c8b6cfca7257b309822b22b6ca7620e29e18158d3efe4ecb66fb7395e49e904",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/shared.js",
+      "name": "shared.js",
+      "kind": "file",
+      "path": "src/shared.js",
+      "span": "L1-L33",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "b6217a706200cf06b4c85e31d2591e0819262a80486ae03d4a8a17de0e119a61",
+      "chars": 857,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/shared.js#esc",
+      "name": "esc",
+      "kind": "function",
+      "path": "src/shared.js",
+      "span": "L21-L28",
+      "signature": "function esc(str)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "75bf8b1634b817ad9985001ba89427d675bc3a3929a7b350d85eceb013c2f95b",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/shared.js#initial",
+      "name": "initial",
+      "kind": "function",
+      "path": "src/shared.js",
+      "span": "L16-L19",
+      "signature": "function initial(name)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "4bb8991d3bba1e449bf7afc7a37338f8e56270cd545d155a5554fa14355a3836",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/shared.js#isAdult",
+      "name": "isAdult",
+      "kind": "function",
+      "path": "src/shared.js",
+      "span": "L30-L32",
+      "signature": "function isAdult(member)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "c9ef975cd88aa02a417aad0273c2fb088153a62848cb21f236b7ff39b27f1ab2",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "src/shared.js#memberColor",
+      "name": "memberColor",
+      "kind": "function",
+      "path": "src/shared.js",
+      "span": "L10-L14",
+      "signature": "function memberColor(id, _members)",
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "e6fe6e39e5db9c2e86b2494064e74fc153106ed883cc63d1912500338d14a2e2",
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    },
+    {
+      "id": "vitest.config.mjs",
+      "name": "vitest.config.mjs",
+      "kind": "file",
+      "path": "vitest.config.mjs",
+      "span": "L1-L10",
+      "signature": null,
+      "exported": true,
+      "origin": "ast",
+      "body_hash": "4a97c2087855ca4770c5ed7b7b79ac2365a533482df85fbd72d64e8b34452d45",
+      "chars": 194,
+      "summary_state": "pending",
+      "summary": null,
+      "crux": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "__tests__/logic.test.mjs#med",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#allDosesComplete",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canAddMedication",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canAssignOwner",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canChooseVisibility",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canEditMedication",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canManageMedications",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canViewMedication",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#daysBefore",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#existingDoseKey",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#formatTime",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#groupByMember",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isClockTime",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isDoseTaken",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isDueOn",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isPrivateMedication",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#managesMedications",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#medicationTimes",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#nextTodayKey",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeDaysMask",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeMemberIds",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeTimes",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#parseJsonArray",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#remindersEnabled",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#reportRange",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#reportUrl",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#searchableFields",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#showsToday",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#slotFromDoseKey",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#withArchivedState",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/shared.js#initial",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/shared.js#memberColor",
+      "relation": "calls",
+      "confidence": "inferred"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "__tests__/logic.test.mjs#med",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#allDosesComplete",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canAddMedication",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canAssignOwner",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canChooseVisibility",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canEditMedication",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canManageMedications",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#canViewMedication",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#existingDoseKey",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#formatTime",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#groupByMember",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isClockTime",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isDoseTaken",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isDueOn",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#isPrivateMedication",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#managesMedications",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#medicationTimes",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#nextTodayKey",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeDaysMask",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeMemberIds",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#normalizeTimes",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#parseJsonArray",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#remindersEnabled",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#searchableFields",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#slotFromDoseKey",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/logic.test.mjs",
+      "target": "src/logic.js#withArchivedState",
+      "relation": "references",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/manifest.test.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/manifest.test.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/manifest.test.mjs",
+      "target": "url",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/manifest.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#database",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#migration",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#rows",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#sql",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#database",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#migration",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#rows",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "__tests__/migration.test.mjs#sql",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "node:child_process",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "node:fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "node:os",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "node:path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/migration.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "__tests__/preload.test.mjs#norm",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "__tests__/preload.test.mjs#norm",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "url",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/preload.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "__tests__/request-helper.test.mjs#call",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "__tests__/request-helper.test.mjs#dbHelpers",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "__tests__/request-helper.test.mjs#call",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "__tests__/request-helper.test.mjs#dbHelpers",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "node:vm",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "url",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs#call",
+      "target": "__tests__/request-helper.test.mjs#call.error",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs#call",
+      "target": "__tests__/request-helper.test.mjs#call.log",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/request-helper.test.mjs#call",
+      "target": "__tests__/request-helper.test.mjs#call.warn",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/ui-contract.test.mjs",
+      "target": "node:fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "__tests__/ui-contract.test.mjs",
+      "target": "vitest",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "build.mjs#readDir",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "build.mjs#surfaceErrors",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "build.mjs#readDir",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "build.mjs#surfaceErrors",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#readDir",
+      "target": "build.mjs#readDir",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.aliasesOf",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.checkQuery",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.limitOf",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.aliasesOf",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.checkQuery",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "build.mjs#surfaceErrors",
+      "target": "build.mjs#surfaceErrors.limitOf",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev-server.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev-server.mjs",
+      "target": "http",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev-server.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev-server.mjs",
+      "target": "url",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#ensureSdk",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#serve",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#ensureSdk",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#fetchSdk",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#mime",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "dev.mjs#serve",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "fs",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "http",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "https",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "path",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs",
+      "target": "url",
+      "relation": "imports",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs#ensureSdk",
+      "target": "dev.mjs#fetchSdk",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "dev.mjs#serve",
+      "target": "dev.mjs#mime",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#allDosesComplete",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canAddMedication",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canAssignOwner",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canChooseVisibility",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canEditMedication",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canManageMedications",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#canViewMedication",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#daysBefore",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#daysBetween",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#existingDoseKey",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#formatTime",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#groupByMember",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#isAdultMember",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#isClockTime",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#isDoseTaken",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#isDueOn",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#isPrivateMedication",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#managesMedications",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#medicationTimes",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#nextTodayKey",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#normalizeDaysMask",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#normalizeMemberIds",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#normalizeTimes",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#parseJsonArray",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#remindersEnabled",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#reportRange",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#reportUrl",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#searchableFields",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#showsToday",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#slotFromDoseKey",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#timeOfDayLabel",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js",
+      "target": "src/logic.js#withArchivedState",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#allDosesComplete",
+      "target": "src/logic.js#isDoseTaken",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#allDosesComplete",
+      "target": "src/logic.js#medicationTimes",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canAddMedication",
+      "target": "src/logic.js#managesMedications",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canAssignOwner",
+      "target": "src/logic.js#isAdultMember",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canEditMedication",
+      "target": "src/logic.js#canManageMedications",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canEditMedication",
+      "target": "src/logic.js#canViewMedication",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canEditMedication",
+      "target": "src/logic.js#isAdultMember",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canManageMedications",
+      "target": "src/logic.js#managesMedications",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canViewMedication",
+      "target": "src/logic.js#isPrivateMedication",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#canViewMedication",
+      "target": "src/logic.js#managesMedications",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#daysBetween",
+      "target": "src/logic.js#daysBetween.utc",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#daysBetween",
+      "target": "src/logic.js#daysBetween.utc",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#formatTime",
+      "target": "src/logic.js#isClockTime",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#isDoseTaken",
+      "target": "src/logic.js#existingDoseKey",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#isDueOn",
+      "target": "src/logic.js#daysBetween",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#managesMedications",
+      "target": "src/logic.js#isAdultMember",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#medicationTimes",
+      "target": "src/logic.js#normalizeTimes",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#medicationTimes",
+      "target": "src/logic.js#parseJsonArray",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#reportRange",
+      "target": "src/logic.js#daysBefore",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#showsToday",
+      "target": "src/logic.js#isDueOn",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/logic.js#timeOfDayLabel",
+      "target": "src/logic.js#isClockTime",
+      "relation": "calls",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/shared.js",
+      "target": "src/shared.js#esc",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/shared.js",
+      "target": "src/shared.js#initial",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/shared.js",
+      "target": "src/shared.js#isAdult",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "src/shared.js",
+      "target": "src/shared.js#memberColor",
+      "relation": "contains",
+      "confidence": "extracted"
+    },
+    {
+      "source": "vitest.config.mjs",
+      "target": "vitest/config",
+      "relation": "imports",
+      "confidence": "extracted"
+    }
+  ]
+}

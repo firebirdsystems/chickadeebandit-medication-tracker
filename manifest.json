@@ -17,8 +17,8 @@
   },
   "storage": "db",
   "preload": {
-    "active": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, archived, created_at FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC"},
-    "archived": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, archived, created_at FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC"},
+    "active": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, archived, created_at FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC"},
+    "archived": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, archived, created_at FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC"},
     "doses": {"sql": "SELECT medication_id, dose_date, slot, logged_by FROM app_medication_tracker__doses WHERE dose_date = ?", "params": [":today"]}
   },
   "contexts": ["household", "shared_space", "shared_space.roster"],
@@ -31,22 +31,47 @@
     "ends_on",
     "remind_member_ids",
     "buddy_member_ids",
-    "schedule_slots"
+    "schedule_slots",
+    "visibility"
   ],
   "row_policies": {
     "medications": {
-      "kind": "owner_only",
+      "kind": "owner_or_visibility",
       "member_column": "member_id",
-      "adults_bypass": true,
-      "member_can_update": false,
-      "member_can_insert": false,
-      "steward_writes_only": true
+      "visibility_column": "visibility",
+      "everyone_values": [],
+      "adult_values": ["family"],
+      "write_visibility_scoped": true,
+      "delete_adult_only": true,
+      "supervisor_assigns_owner": true,
+      "steward_writes_only": true,
+      "column_write_acls": {
+        "id": { "writable_by": ["adult"] },
+        "member_id": { "writable_by": [], "actions": ["update"] },
+        "name": { "writable_by": ["adult"] },
+        "dosage": { "writable_by": ["adult"] },
+        "notes": { "writable_by": ["adult"] },
+        "schedule_slots": { "writable_by": ["adult"] },
+        "reminder_times": { "writable_by": ["adult"] },
+        "reminders_on": { "writable_by": ["adult"] },
+        "days_mask": { "writable_by": ["adult"] },
+        "every_n_days": { "writable_by": ["adult"] },
+        "started_on": { "writable_by": ["adult"] },
+        "ends_on": { "writable_by": ["adult"] },
+        "remind_member_ids": { "writable_by": ["adult"] },
+        "buddy_member_ids": { "writable_by": ["adult"] },
+        "visibility": { "writable_by": ["adult"] },
+        "archived": { "writable_by": ["adult"] },
+        "created_at": { "writable_by": ["adult"] }
+      }
     },
     "doses": {
       "kind": "inherit_visibility",
       "fk_column": "medication_id",
       "parent_table": "medications",
       "writer_column": "logged_by",
+      "adults_bypass": true,
+      "parent_owner_actions": ["update", "delete"],
       "retain_days": {
         "default": 730,
         "timestamp_column": "dose_date",

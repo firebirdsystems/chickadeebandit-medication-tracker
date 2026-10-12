@@ -95,3 +95,31 @@ describe("dose retention", () => {
     expect(indexes).toMatch(/INDEX[^\n]*app_medication_tracker__doses \(dose_date\)/);
   });
 });
+
+describe("migration 005 visibility", () => {
+  it("shares every existing medication, as it always was, and defaults new rows the same way", () => {
+    const db = database();
+    sql(db, migration("001_init.sql"));
+    sql(db, migration("002_indexes.sql"));
+    sql(db, migration("003_schedule_reminders.sql"));
+    sql(db, migration("004_dose_dosage.sql"));
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at)
+      VALUES ('before', 'm1', 'Old med', '2026-01-01');
+    `);
+
+    sql(db, migration("005_visibility.sql"));
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at)
+      VALUES ('after', 'm1', 'New med', '2026-10-12');
+      INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at)
+      VALUES ('kept', 'm1', 'Own med', 'private', '2026-10-12');
+    `);
+
+    expect(rows(db, `SELECT id, visibility FROM app_medication_tracker__medications ORDER BY id`)).toEqual([
+      { id: "after", visibility: "family" },
+      { id: "before", visibility: "family" },
+      { id: "kept", visibility: "private" },
+    ]);
+  });
+});
