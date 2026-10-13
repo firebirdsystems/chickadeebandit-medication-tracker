@@ -364,6 +364,7 @@ import {
   withArchivedState,
   canViewMedication, managesMedications, canAddMedication, canEditMedication,
   canAssignOwner, canChooseVisibility, isPrivateMedication, VISIBILITY_FAMILY, VISIBILITY_PRIVATE,
+  reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
   reportRange, reportUrl,
@@ -409,6 +410,12 @@ let modalEl      = null;
 // every server-side surface (glance, kiosk, cron) would disagree with the row.
 let TODAY        = hubToday();
 let reminderStatus = null;
+// Bookkeeping for the re-read on returning to the tab (refreshOnReturn).
+let writeEpoch     = 0;     // writes this page has started
+let writesInFlight = 0;
+let refreshInFlight = null; // the one re-read both return events share
+let refreshOwed    = false; // a return that could not re-read yet
+let refreshFailed  = false; // the last re-read could not reach the hub
 
 const DEMO_MEMBERS = [
   { id: "parent-1", name: "Alex",   role: "adult" },
@@ -427,16 +434,22 @@ async function db(sql, params = []) {
   // count must not read the absence of a database as "the write matched
   // nothing".
   if (!DB) return { rows: [], changed: 1 };
-  const res = await fetch(DB, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sql, params }),
-  });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body || typeof body !== "object" || body.error) {
-    throw new Error(body?.error || `Database request failed (${res.status})`);
+  const write = !/^\s*SELECT\b/i.test(sql);
+  if (write) { writeEpoch++; writesInFlight++; }
+  try {
+    const res = await fetch(DB, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sql, params }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || typeof body !== "object" || body.error) {
+      throw new Error(body?.error || `Database request failed (${res.status})`);
+    }
+    return body;
+  } finally {
+    if (write) { writesInFlight--; settleOwedRefresh(); }
   }
-  return body;
 }
 
 /**
@@ -472,6 +485,16 @@ async function loadMedications() {
     archivedMeds = DEMO_MEDS.filter(m => m.archived);
     return;
   }
+  const fresh = await fetchMedications();
+  medications  = fresh.active;
+  archivedMeds = fresh.archived;
+  // Any full read of the list answers "this may be out of date".
+  refreshFailed = false;
+}
+
+// Reads without assigning, so a caller can decide whether the answer is still
+// the current one before it replaces what is on screen.
+async function fetchMedications() {
   const [active, archived] = await Promise.all([
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
                days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
@@ -482,20 +505,24 @@ async function loadMedications() {
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
-  medications  = active.rows;
-  archivedMeds = archived.rows;
+  return { active: active.rows, archived: archived.rows };
 }
 
 async function loadDoses() {
   if (!DB) { doses = {}; return; }
+  doses = await fetchDoses(TODAY);
+}
+
+async function fetchDoses(day) {
   const { rows } = await db(
     `SELECT medication_id, dose_date, slot, logged_by FROM app_medication_tracker__doses WHERE dose_date = ?`,
-    [TODAY]
+    [day]
   );
-  doses = {};
+  const byKey = {};
   for (const r of rows) {
-    doses[`${r.medication_id}__${r.dose_date}__${r.slot}`] = { loggedBy: r.logged_by };
+    byKey[`${r.medication_id}__${r.dose_date}__${r.slot}`] = { loggedBy: r.logged_by };
   }
+  return byKey;
 }
 
 async function loadReminderStatus() {
@@ -716,6 +743,10 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
       <div class="toggle-group" style="display:grid;gap:4px">
         ${memberChecksHtml("f-remind-member", med.remind_member_ids, med.member_id, true)}
       </div>
+      <div id="f-private-recipients-note" data-testid="private-recipients-note" hidden
+           style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        Only you can see this medication, so only you can be reminded about it or told about a missed dose.
+      </div>
     </div>
     <div class="form-group">
       <label>Missed-dose escalation</label>
@@ -796,17 +827,17 @@ window.submitMedication = async function(existingId) {
     hubAlert("The end date must be on or after the start date.");
     return;
   }
-  const remindMemberIds = normalizeMemberIds(
-    [...document.querySelectorAll(".f-remind-member:checked")].map(el => el.value),
-  );
-  const buddyMemberIds = normalizeMemberIds(
-    [...document.querySelectorAll(".f-buddy-member:checked")].map(el => el.value),
-  );
   // Only the person a medication is for keeps it private; one added for
   // someone else is shared, so the adults who added it can keep it.
-  const visibility = canChooseVisibility(memberId, ME)
+  const choosesVisibility = canChooseVisibility(memberId, myMember());
+  const visibility = choosesVisibility
     && document.getElementById("f-visibility")?.value === VISIBILITY_PRIVATE
     ? VISIBILITY_PRIVATE : VISIBILITY_FAMILY;
+  // A private medication reaches its owner alone, whatever the boxes say.
+  const checked = cssClass => recipientsForVisibility(
+    [...document.querySelectorAll(`.${cssClass}:checked`)].map(el => el.value), visibility, memberId);
+  const remindMemberIds = reminderRecipientsValue(checked("f-remind-member"));
+  const buddyMemberIds = normalizeMemberIds(checked("f-buddy-member"));
 
   const now = new Date().toISOString();
 
@@ -818,19 +849,23 @@ window.submitMedication = async function(existingId) {
       medications[idx] = { ...medications[idx], name, dosage, notes,
         reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
         every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility };
+        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
+        ...(choosesVisibility ? { visibility } : {}) };
     }
     closeModal();
     render();
     try {
+      // `visibility` is its owner's column alone (writable_by ["adult_owner"]):
+      // naming it in anyone else's UPDATE would make the hub change no row.
       const { changed } = await db(
         `UPDATE app_medication_tracker__medications
             SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
                 days_mask=?, every_n_days=?, started_on=?, ends_on=?,
-                remind_member_ids=?, buddy_member_ids=?, visibility=?
+                remind_member_ids=?, buddy_member_ids=?${choosesVisibility ? ", visibility=?" : ""}
          WHERE id=?`,
         [name, dosage, notes, timesJson, remindersOn, daysMask, everyNDays,
-          startedOn, endsOn, remindMemberIds, buddyMemberIds, visibility, existingId]
+          startedOn, endsOn, remindMemberIds, buddyMemberIds,
+          ...(choosesVisibility ? [visibility] : []), existingId]
       );
       // The re-read puts back what is stored when the hub changed no row.
       await Promise.all([loadMedications(), loadReminderStatus()]);
@@ -853,14 +888,17 @@ window.submitMedication = async function(existingId) {
     closeModal();
     render();
     try {
+      // One added for someone else leaves `visibility` to the column default
+      // ("family"): the hub accepts the column only on the author's own row.
       await db(
         `INSERT INTO app_medication_tracker__medications
            (id, member_id, name, dosage, notes, reminder_times, reminders_on,
             days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
-            visibility, archived, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+            ${choosesVisibility ? "visibility, " : ""}archived, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${choosesVisibility ? "?, " : ""}0, ?)`,
         [id, memberId, name, dosage, notes, timesJson, remindersOn,
-          daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds, visibility, now]
+          daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds,
+          ...(choosesVisibility ? [visibility] : []), now]
       );
       await Promise.all([loadMedications(), loadReminderStatus()]);
       render();
@@ -929,7 +967,7 @@ function openModal(html) {
   modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
   document.body.appendChild(modalEl);
 }
-function closeModal() { modalEl?.remove(); modalEl = null; }
+function closeModal() { modalEl?.remove(); modalEl = null; settleOwedRefresh(); }
 window.closeModal = closeModal;
 
 // Who else sees the medication. Offered only while it is for the person
@@ -940,7 +978,7 @@ function visibilityGroupHtml(ownerId, me, current = VISIBILITY_FAMILY) {
   return `
     <div class="form-group" id="f-visibility-group" ${shown ? "" : "hidden"}>
       <label>Who can see it</label>
-      <select id="f-visibility" data-testid="f-visibility">
+      <select id="f-visibility" data-testid="f-visibility" onchange="syncPrivateRecipients()">
         <option value="${VISIBILITY_FAMILY}" ${current === VISIBILITY_PRIVATE ? "" : "selected"}>${others}</option>
         <option value="${VISIBILITY_PRIVATE}" ${current === VISIBILITY_PRIVATE ? "selected" : ""}>Only me</option>
       </select>
@@ -949,8 +987,34 @@ function visibilityGroupHtml(ownerId, me, current = VISIBILITY_FAMILY) {
 
 window.ownerChanged = function(ownerId) {
   const group = document.getElementById("f-visibility-group");
-  if (group) group.hidden = !canChooseVisibility(ownerId, ME);
+  if (group) group.hidden = !canChooseVisibility(ownerId, myMember());
+  syncPrivateRecipients();
 };
+
+// A private medication can remind its owner and nobody else (the hub delivers
+// only to someone who can read it), so the form stops offering anyone else
+// rather than saving a list that would quietly reach no one.
+function syncPrivateRecipients() {
+  const ownerId = document.getElementById("f-member")?.value ?? "";
+  const isPrivate = canChooseVisibility(ownerId, myMember())
+    && document.getElementById("f-visibility")?.value === VISIBILITY_PRIVATE;
+  for (const box of document.querySelectorAll(".f-remind-member, .f-buddy-member")) {
+    const unreachable = isPrivate && box.value !== ownerId;
+    if (unreachable && !box.disabled) {
+      // Kept on the box so that choosing to share again puts the ticks back:
+      // trying "Only me" and changing one's mind must not empty the lists.
+      box.dataset.wasChecked = box.checked ? "yes" : "no";
+      box.checked = false;
+    } else if (!unreachable && box.dataset.wasChecked) {
+      box.checked = box.dataset.wasChecked === "yes";
+      delete box.dataset.wasChecked;
+    }
+    box.disabled = unreachable;
+  }
+  const note = document.getElementById("f-private-recipients-note");
+  if (note) note.hidden = !isPrivate;
+}
+window.syncPrivateRecipients = syncPrivateRecipients;
 
 window.openAddModal = function() {
   const me = myMember();
@@ -999,6 +1063,7 @@ window.openAddModal = function() {
   `);
 
   renderEditorTimes();
+  syncPrivateRecipients();
   document.getElementById("f-name")?.focus();
 };
 
@@ -1045,6 +1110,7 @@ window.openEditModal = function(id) {
   `);
 
   renderEditorTimes();
+  syncPrivateRecipients();
   document.getElementById("f-name")?.focus();
 };
 
@@ -1300,6 +1366,8 @@ function render() {
         <div class="date-label">${esc(dateLabel)}</div>
       </div>
     </header>
+    ${refreshFailed ? `<div class="load-error" data-testid="refresh-error" role="alert"><span>Couldn’t refresh. This list may be out of date.</span>
+        <button type="button" class="load-error-retry" data-testid="refresh-retry" data-action="refresh-now">Try again</button></div>` : ""}
     ${reminderStatusHtml()}
     ${tabsHtml}
     ${bodyHtml}
@@ -1327,6 +1395,7 @@ document.addEventListener("click", (e) => {
     case "add-time":    window.addEditorTime(); break;
     case "remove-time": window.removeEditorTime(el.dataset.time); break;
     case "retry-load":  void firstLoad(); break;
+    case "refresh-now": void refreshOnReturn(); break;
     case "open-report": openReport(el.dataset.report, el.dataset.format); break;
   }
 });
@@ -1344,10 +1413,64 @@ async function firstLoad() {
   render();
 }
 void firstLoad();
-// A day rollover that cannot be read stays quiet here; the next tick retries.
-window.addEventListener("focus", () => { void refreshLocalDay().catch(() => {}); void loadReminderStatus().then(render); });
+// Coming back to the tab re-reads what this member may see. Another adult may
+// have made a medication private since it was drawn here, and a list loaded
+// once would keep showing its name, dosage and notes.
+//
+// Both return events (focus, visibilitychange) share one re-read. It waits its
+// turn rather than run under an open form, which a redraw would disturb, or
+// beside a write: a hub dialog closing hands focus back to this frame just
+// before the write it confirmed, and a read begun then describes the moment
+// before that write. A return that had to wait is owed, and is paid when the
+// form closes or the write settles. The demo has no hub to re-read from, and
+// its loaders reset what was tried.
+function refreshOnReturn() {
+  refreshInFlight ??= rereadOnReturn().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
+
+function settleOwedRefresh() {
+  if (!refreshOwed || !canRereadNow({ modalOpen: !!modalEl, writesInFlight })) return;
+  // Deferred a turn: the caller may be about to open another form or start
+  // the write this close belongs to.
+  setTimeout(() => { if (refreshOwed) void refreshOnReturn(); }, 0);
+}
+
+async function rereadOnReturn() {
+  if (!DB) { await loadReminderStatus(); render(); return; }
+  // The first load's own banner and retry cover a household that never loaded.
+  if (loadFailed) return;
+  if (!canRereadNow({ modalOpen: !!modalEl, writesInFlight })) { refreshOwed = true; return; }
+  refreshOwed = false;
+  // Counted from before the first wait: a write begun during the day rollover
+  // below is one this read did not see.
+  const epochAtStart = writeEpoch;
+  // The day first and on its own, so the doses below are asked for the day the
+  // page ends up on. A rollover that cannot be read leaves the day as it was.
+  await refreshLocalDay().catch(() => {});
+  const day = TODAY;
+  // Settled separately: the medications are the read that matters here, and a
+  // failed dose read must not keep a no-longer-shared one on screen.
+  const [meds, dosesForDay] = await Promise.allSettled([fetchMedications(), fetchDoses(day)]);
+  if (!rereadStillCurrent({ epochAtStart, writeEpoch, modalOpen: !!modalEl, writesInFlight })) {
+    refreshOwed = true;
+    settleOwedRefresh();
+    return;
+  }
+  if (meds.status === "fulfilled") {
+    medications  = meds.value.active;
+    archivedMeds = meds.value.archived;
+  }
+  if (dosesForDay.status === "fulfilled" && day === TODAY) doses = dosesForDay.value;
+  // Said on the page rather than swallowed: what is drawn may include a
+  // medication this member can no longer see.
+  refreshFailed = meds.status === "rejected";
+  await loadReminderStatus();
+  render();
+}
+window.addEventListener("focus", () => { void refreshOnReturn(); });
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { void refreshLocalDay().catch(() => {}); void loadReminderStatus().then(render); }
+  if (!document.hidden) void refreshOnReturn();
 });
 setInterval(() => { void refreshLocalDay().catch(() => {}); }, 60_000);
 </script>

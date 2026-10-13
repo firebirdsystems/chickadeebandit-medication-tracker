@@ -60,7 +60,7 @@
         "ends_on": { "writable_by": ["adult"] },
         "remind_member_ids": { "writable_by": ["adult"] },
         "buddy_member_ids": { "writable_by": ["adult"] },
-        "visibility": { "writable_by": ["adult"] },
+        "visibility": { "writable_by": ["adult_owner"] },
         "archived": { "writable_by": ["adult"] },
         "created_at": { "writable_by": ["adult"] }
       }
@@ -116,7 +116,8 @@
     "nudge": {
       "at_minutes": 0,
       "audience": "owner",
-      "member_column": "remind_member_ids"
+      "member_column": "remind_member_ids",
+      "empty_list": "audience"
     },
     "escalation": {
       "grace_minutes": 30,

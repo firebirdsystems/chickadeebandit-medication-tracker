@@ -123,3 +123,30 @@ describe("migration 005 visibility", () => {
     ]);
   });
 });
+
+describe("migration 006 reminder recipients", () => {
+  it("puts a list the old form saved as nobody back on the owner default, and nothing else", () => {
+    const db = database();
+    for (const name of ["001_init.sql", "002_indexes.sql", "003_schedule_reminders.sql",
+      "004_dose_dosage.sql", "005_visibility.sql"]) sql(db, migration(name));
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications
+        (id, member_id, name, reminders_on, remind_member_ids, buddy_member_ids, created_at)
+      VALUES
+        ('silenced', 'm1', 'Saved by the old form', 1, '[]', '[]', '2026-01-01'),
+        ('off', 'm1', 'Turned off', 0, '[]', '[]', '2026-01-02'),
+        ('named', 'm1', 'Named recipient', 1, '["m2"]', '["m2"]', '2026-01-03'),
+        ('default', 'm1', 'Never edited', 1, '', '[]', '2026-01-04');
+    `);
+
+    sql(db, migration("006_reminder_recipients_default.sql"));
+
+    expect(rows(db, `SELECT id, reminders_on, remind_member_ids, buddy_member_ids
+                       FROM app_medication_tracker__medications ORDER BY id`)).toEqual([
+      { id: "default", reminders_on: 1, remind_member_ids: "", buddy_member_ids: "[]" },
+      { id: "named", reminders_on: 1, remind_member_ids: '["m2"]', buddy_member_ids: '["m2"]' },
+      { id: "off", reminders_on: 0, remind_member_ids: "", buddy_member_ids: "[]" },
+      { id: "silenced", reminders_on: 1, remind_member_ids: "", buddy_member_ids: "[]" },
+    ]);
+  });
+});

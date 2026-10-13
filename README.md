@@ -11,7 +11,10 @@ Track daily medications for every family member. Check off doses as they're take
 - Every adult sees every shared medication, in the household or in a shared space, and can tick
   its doses, change it or archive it. A child sees and ticks only their own.
 - A medication is shared with the other adults unless the person it is for marks it "Only me". A
-  private medication, and its dose history, is theirs alone.
+  private medication, and its dose history, is theirs alone. Only the adult it is for makes that
+  choice: no other adult can hide it, and a child's medication stays shared with the adults.
+- A reminder goes to the person the medication is for unless other people are chosen. A private
+  medication reminds that person only, and its missed-dose alert can go to nobody else.
 - A tick is undone by whoever made it or by the person the medication is for; at home any adult can
   undo one. Who a medication is for never changes once it is added.
 - Adults add medications for themselves and for the children. In a shared space, every adult adds

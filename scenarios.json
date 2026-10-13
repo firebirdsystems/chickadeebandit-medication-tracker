@@ -328,7 +328,7 @@
       ]
     },
     {
-      "name": "in a shared space every adult sees and keeps every shared medication and ticks its doses, never reaches a private one, cannot take one over, and a tick is undone by its writer, the medication's owner or the steward",
+      "name": "in a shared space every adult sees and keeps every shared medication and ticks its doses, never reaches a private one, cannot take one over or hide one that is not theirs, and a tick is undone by its writer, the medication's owner or the steward",
       "context": "shared_space",
       "members": {
         "a": "adult",
@@ -555,6 +555,49 @@
         },
         {
           "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-b'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-b'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT id, visibility FROM app_medication_tracker__medications WHERE id = 'm-b'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-b",
+                "visibility": "family"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-planted', ?, 'Planted', 'private', '2026-01-01T00:00:03Z')",
+          "params": [
+            "{{b}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "your own rows"
+          }
+        },
+        {
+          "action": "db",
           "as": "c",
           "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-b' AND dose_date = '2026-01-02' AND slot = '08:00'",
           "expect": {
@@ -618,7 +661,7 @@
       ]
     },
     {
-      "name": "an adult keeps a medication private: another adult sees neither it nor its doses, while a child's medication stays shared with every adult",
+      "name": "an adult keeps a medication private: another adult sees neither it nor its doses, while a child's medication stays shared with every adult, and only the adult a medication is for changes who sees it",
       "members": {
         "mum": "adult",
         "dad": "adult",
@@ -737,7 +780,7 @@
           "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-kid'",
           "expect": {
             "status": 403,
-            "errorIncludes": "adult members"
+            "errorIncludes": "when an adult"
           }
         },
         {
@@ -800,6 +843,62 @@
           "expect": {
             "status": 200,
             "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT visibility FROM app_medication_tracker__medications WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "visibility": "family"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-kid-hidden', ?, 'Hidden', 'private', '2026-01-01T00:00:02Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "your own rows"
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m-mum"
+              }
+            ]
           }
         }
       ]

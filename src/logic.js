@@ -79,6 +79,47 @@ export function normalizeMemberIds(ids) {
 }
 
 /**
+ * The stored value for the reminder-recipient list. Nobody ticked means the
+ * person the medication is for, which the hub spells as the empty string; an
+ * empty JSON array is what an older hub reads as "the household picked nobody".
+ * The reminder lane now declares `empty_list: "audience"`, so both spellings
+ * reach the owner; the plain default is still the one this page writes.
+ */
+export function reminderRecipientsValue(ids) {
+  const normalized = normalizeMemberIds(ids);
+  return normalized === "[]" ? "" : normalized;
+}
+
+/**
+ * The recipients a medication can actually reach. The hub delivers a reminder
+ * only to someone who can read the medication, and a private one is read by
+ * the person it is for alone, so anyone else named on it would silently
+ * receive nothing.
+ */
+export function recipientsForVisibility(ids, visibility, ownerId) {
+  const list = (ids ?? []).filter(id => typeof id === "string" && id);
+  return visibility === VISIBILITY_PRIVATE ? list.filter(id => id === ownerId) : list;
+}
+
+/**
+ * Whether the list may be re-read from the hub right now. Not under an open
+ * form, which a redraw would disturb, and not while a write is on its way: the
+ * read would describe the moment before it and could land after it.
+ */
+export function canRereadNow({ modalOpen, writesInFlight }) {
+  return !modalOpen && writesInFlight === 0;
+}
+
+/**
+ * Whether a re-read that has just come back may replace what is on screen.
+ * `writeEpoch` counts the writes this page has started; one that began after
+ * the read did makes the read a picture of the state before it.
+ */
+export function rereadStillCurrent({ epochAtStart, writeEpoch, modalOpen, writesInFlight }) {
+  return epochAtStart === writeEpoch && canRereadNow({ modalOpen, writesInFlight });
+}
+
+/**
  * A medication's schedule as clock times.
  *
  * Falls back to mapping the legacy `schedule_slots` when `reminder_times` is
@@ -161,11 +202,13 @@ export function canAddMedication(member, tenant = {}) {
   return managesMedications(member, tenant);
 }
 
-/** Only the person a medication is for decides who else sees it. A medication
+/** Only the person a medication is for decides who else sees it, and only as
+ * an adult: a child's medication stays in their parents' sight. A medication
  * added for someone else is shared with every adult, which is what makes it
- * manageable by the people who added it. */
+ * manageable by the people who added it. Mirrors the hub's rule for the
+ * `visibility` column (column_write_acls, writable_by ["adult_owner"]). */
 export function canChooseVisibility(ownerId, me) {
-  return !!me && !!ownerId && ownerId === me.id;
+  return isAdultMember(me) && !!ownerId && ownerId === me.id;
 }
 
 /**

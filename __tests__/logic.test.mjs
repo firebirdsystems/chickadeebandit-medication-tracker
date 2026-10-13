@@ -8,6 +8,7 @@ import {
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
+  reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
   medicationTimes, remindersEnabled, MAX_TIMES,
   withArchivedState, searchableFields,
   isDueOn, showsToday,
@@ -322,6 +323,43 @@ describe("clock-time schedule", () => {
     expect(normalizeMemberIds([])).toBe("[]");
   });
 
+  // The hub reads "[]" as "the household picked nobody" and creates no
+  // reminder; the empty string is the column default and means the person the
+  // medication is for. The form promises the second when nobody is ticked.
+  it("stores an untouched reminder list as the owner default, never as nobody", () => {
+    expect(reminderRecipientsValue([])).toBe("");
+    expect(reminderRecipientsValue(undefined)).toBe("");
+    expect(reminderRecipientsValue(["", "  "])).toBe("");
+    expect(reminderRecipientsValue(["member-2", "member-1"])).toBe('["member-1","member-2"]');
+  });
+
+  it("keeps only the owner as a recipient of a private medication", () => {
+    expect(recipientsForVisibility(["adult-1", "adult-2"], "private", "adult-1")).toEqual(["adult-1"]);
+    expect(recipientsForVisibility(["adult-2"], "private", "adult-1")).toEqual([]);
+    expect(recipientsForVisibility(["adult-1", "adult-2"], "family", "adult-1")).toEqual(["adult-1", "adult-2"]);
+    expect(recipientsForVisibility(undefined, "private", "adult-1")).toEqual([]);
+    // Another adult named alone on a private medication falls back to its
+    // owner for the reminder, and to nobody for the missed-dose alert.
+    expect(reminderRecipientsValue(recipientsForVisibility(["adult-2"], "private", "adult-1"))).toBe("");
+    expect(normalizeMemberIds(recipientsForVisibility(["adult-2"], "private", "adult-1"))).toBe("[]");
+  });
+
+  it("re-reads the list only with no form open and no write on its way", () => {
+    expect(canRereadNow({ modalOpen: false, writesInFlight: 0 })).toBe(true);
+    expect(canRereadNow({ modalOpen: true, writesInFlight: 0 })).toBe(false);
+    expect(canRereadNow({ modalOpen: false, writesInFlight: 1 })).toBe(false);
+  });
+
+  it("drops a re-read that a write, or a form, overtook", () => {
+    const calm = { epochAtStart: 3, writeEpoch: 3, modalOpen: false, writesInFlight: 0 };
+    expect(rereadStillCurrent(calm)).toBe(true);
+    // A write that started and finished while the read was out: nothing is in
+    // flight any more, and the read is still a picture of before it.
+    expect(rereadStillCurrent({ ...calm, writeEpoch: 4 })).toBe(false);
+    expect(rereadStillCurrent({ ...calm, writeEpoch: 4, writesInFlight: 1 })).toBe(false);
+    expect(rereadStillCurrent({ ...calm, modalOpen: true })).toBe(false);
+  });
+
   it("treats allDosesComplete over clock times", () => {
     const med = { id: "m1", reminder_times: '["08:00","20:00"]' };
     const partial = { "m1__2026-06-01__08:00": true };
@@ -434,6 +472,9 @@ describe("private medications", () => {
     expect(canChooseVisibility("kid-1", alex)).toBe(false);
     expect(canChooseVisibility("adult-1", null)).toBe(false);
     expect(canChooseVisibility("", alex)).toBe(false);
+  });
+  it("is never a child's choice, their own medication included", () => {
+    expect(canChooseVisibility(child.id, child)).toBe(false);
   });
   it("a child reads their own medication whatever its visibility, and nothing else", () => {
     expect(canViewMedication(med({ member_id: "kid-1", visibility: "private" }), child, MEMBERS)).toBe(true);

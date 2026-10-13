@@ -64,7 +64,7 @@
       ]
     },
     {
-      "name": "in a shared space every adult sees and edits every shared medication, a private one stays its owner's, and only its owner is offered the choice",
+      "name": "in a shared space every adult sees and edits every shared medication, a private one stays its owner's and can remind its owner alone, and only its owner is offered the choice",
       "context": "shared_space",
       "members": {
         "steward": "admin",
@@ -81,6 +81,11 @@
             "{{sam}}", "Sertraline", "50mg", "[\"21:00\"]"
           ]
         },
+        {
+          "action": "seedRaw",
+          "sql": "UPDATE app_medication_tracker__medications SET remind_member_ids = ?, buddy_member_ids = ? WHERE id = 'sp-pat'",
+          "params": ["[\"{{sam}}\",\"{{steward}}\"]", "[\"{{sam}}\"]"]
+        },
         { "action": "open", "as": "pat" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "pat" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "pat" },
@@ -93,7 +98,19 @@
         { "action": "click", "selector": ".modal-actions .btn-ghost", "as": "pat" },
         { "action": "click", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "pat" },
         { "action": "expectVisible", "selector": "[data-testid=\"f-visibility\"]", "as": "pat" },
+        { "action": "expectHidden", "selector": "[data-testid=\"private-recipients-note\"]", "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 0, "as": "pat" },
         { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "private", "as": "pat" },
+        { "action": "expectVisible", "selector": "[data-testid=\"private-recipients-note\"]", "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 2, "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:not(:disabled)", "count": 1, "as": "pat" },
+        { "action": "expectCount", "selector": ".f-buddy-member:disabled", "count": 2, "as": "pat" },
+        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "family", "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 0, "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:checked", "count": 2, "as": "pat" },
+        { "action": "expectCount", "selector": ".f-buddy-member:checked", "count": 1, "as": "pat" },
+        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "private", "as": "pat" },
+        { "action": "expectCount", "selector": ".f-remind-member:checked", "count": 0, "as": "pat" },
         { "action": "click", "selector": ".modal-actions [data-action=\"save-med\"]", "as": "pat" },
         { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"][data-visibility=\"private\"] [data-testid=\"private-badge\"]", "as": "pat" },
         { "action": "open", "as": "sam" },
