@@ -481,6 +481,9 @@ async function loadMembers() {
 
 async function loadMedications() {
   if (!DB) {
+    // Seeded once: the demo stores nothing, so a later call (the re-read after
+    // a save or an archive) must keep what was added or changed.
+    if (medications.length || archivedMeds.length) return;
     medications  = DEMO_MEDS.filter(m => !m.archived);
     archivedMeds = DEMO_MEDS.filter(m => m.archived);
     return;
@@ -935,8 +938,15 @@ window.submitMedication = async function(existingId) {
 // ── Archive / unarchive ────────────────────────────────────────────────────
 window.archiveMedication = async function(id, archive) {
   const label = archive ? "archive" : "restore";
+  // Asked from the edit form, which stays open, held like a save, until the
+  // hub has answered: a failed write leaves it there as typed.
+  const form = modalEl;
+  if (form?.dataset.saving) return;
   const ok = await hubConfirm({ message: `${archive ? "Archive" : "Restore"} this medication?`, confirmLabel: label.charAt(0).toUpperCase() + label.slice(1), destructive: archive });
-  if (!ok) return;
+  if (!ok || form?.dataset.saving) return;
+  const formBtns = form ? form.querySelectorAll('[data-action="save-med"], [data-action="archive-med"]') : [];
+  if (form) form.dataset.saving = "yes";
+  for (const btn of formBtns) btn.disabled = true;
 
   // Optimistic: move between medications / archivedMeds arrays
   const previousMedications = medications.slice();
@@ -956,7 +966,6 @@ window.archiveMedication = async function(id, archive) {
       medications.push(withArchivedState(med, false));
     }
   }
-  closeModal();
   render();
 
   try {
@@ -966,6 +975,8 @@ window.archiveMedication = async function(id, archive) {
         WHERE id = ?`,
       [archive ? 1 : 0, id],
     );
+    // Only the form this came from: it may have been cancelled meanwhile.
+    if (form && modalEl === form) closeModal();
     // The re-read puts back what is stored when the hub changed no row.
     await Promise.all([loadMedications(), loadReminderStatus()]);
     render();
@@ -976,6 +987,9 @@ window.archiveMedication = async function(id, archive) {
     render();
     console.error(error);
     hubAlert(`Couldn’t ${label} the medication — try again.`);
+  } finally {
+    if (form) delete form.dataset.saving;
+    for (const btn of formBtns) btn.disabled = false;
   }
 };
 
