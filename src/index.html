@@ -841,20 +841,19 @@ window.submitMedication = async function(existingId) {
 
   const now = new Date().toISOString();
 
-  if (existingId) {
-    // Optimistic: update in place
-    const idx = medications.findIndex(m => m.id === existingId);
-    const previous = idx === -1 ? null : { ...medications[idx] };
-    if (idx !== -1) {
-      medications[idx] = { ...medications[idx], name, dosage, notes,
-        reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
-        every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
-        ...(choosesVisibility ? { visibility } : {}) };
-    }
-    closeModal();
-    render();
-    try {
+  // The form stays open as typed until the hub has answered: a save that
+  // failed, or changed no row, leaves everything there to try again.
+  const form = modalEl;
+  if (!form || form.dataset.saving) return;
+  form.dataset.saving = "yes";
+  // Archive too: it would race the save it shares a row with.
+  const formBtns = form.querySelectorAll('[data-action="save-med"], [data-action="archive-med"]');
+  for (const btn of formBtns) btn.disabled = true;
+  // One id per form, so that trying again after an answer that never arrived
+  // collides with the row the first try added instead of adding a second.
+  const id = existingId || (form.dataset.newId ??= crypto.randomUUID());
+  try {
+    if (existingId) {
       // `visibility` is its owner's column alone (writable_by ["adult_owner"]):
       // naming it in anyone else's UPDATE would make the hub change no row.
       const { changed } = await db(
@@ -867,30 +866,19 @@ window.submitMedication = async function(existingId) {
           startedOn, endsOn, remindMemberIds, buddyMemberIds,
           ...(choosesVisibility ? [visibility] : []), existingId]
       );
-      // The re-read puts back what is stored when the hub changed no row.
-      await Promise.all([loadMedications(), loadReminderStatus()]);
-      render();
-      if (changed === 0) hubAlert("This medication could not be changed. Nothing was saved.");
-    } catch (error) {
-      if (idx !== -1 && previous) medications[idx] = previous;
-      render();
-      console.error(error);
-      hubAlert("Couldn’t save the medication — try again.");
-    }
-  } else {
-    // Optimistic: append new med
-    const id = crypto.randomUUID();
-    medications.push({ id, member_id: memberId, name, dosage, notes,
-      reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
-      every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility,
-      archived: 0, created_at: now });
-    closeModal();
-    render();
-    try {
+      if (changed === 0) {
+        // The list behind the form may be out of date (the medication may no
+        // longer be this member's to change): re-read it when the form closes,
+        // or now if it was closed while the hub was answering.
+        refreshOwed = true;
+        settleOwedRefresh();
+        hubAlert("This medication could not be changed. Nothing was saved.");
+        return;
+      }
+    } else {
       // One added for someone else leaves `visibility` to the column default
       // ("family"): the hub accepts the column only on the author's own row.
-      await db(
+      const { changed } = await db(
         `INSERT INTO app_medication_tracker__medications
            (id, member_id, name, dosage, notes, reminder_times, reminders_on,
             days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
@@ -900,15 +888,48 @@ window.submitMedication = async function(existingId) {
           daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds,
           ...(choosesVisibility ? [visibility] : []), now]
       );
-      await Promise.all([loadMedications(), loadReminderStatus()]);
-      render();
-    } catch (error) {
-      medications = medications.filter(m => m.id !== id);
-      render();
-      console.error(error);
-      hubAlert("Couldn’t add the medication — try again.");
+      if (changed === 0) throw new Error("The hub added no medication row");
     }
+  } catch (error) {
+    console.error(error);
+    // The hub may have saved it and the answer been lost: re-read on close.
+    refreshOwed = true;
+    settleOwedRefresh();
+    hubAlert(existingId ? "Couldn’t save the medication — try again." : "Couldn’t add the medication — try again.");
+    return;
+  } finally {
+    delete form.dataset.saving;
+    for (const btn of formBtns) btn.disabled = false;
   }
+
+  // Saved. Drawn from what was sent, then from what is stored.
+  if (existingId) {
+    for (const list of [medications, archivedMeds]) {
+      const idx = list.findIndex(m => m.id === existingId);
+      if (idx === -1) continue;
+      list[idx] = { ...list[idx], name, dosage, notes,
+        reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
+        every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
+        remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
+        ...(choosesVisibility ? { visibility } : {}) };
+    }
+  } else {
+    medications.push({ id, member_id: memberId, name, dosage, notes,
+      reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
+      every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
+      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility,
+      archived: 0, created_at: now });
+  }
+  // Only the form this save came from: it may have been cancelled meanwhile.
+  if (modalEl === form) closeModal();
+  render();
+  // The re-read is not the save: failing, it must not report the save failed.
+  const [reread] = await Promise.allSettled([loadMedications(), loadReminderStatus()]);
+  if (reread.status === "rejected") {
+    console.error(reread.reason);
+    refreshFailed = true;
+  }
+  render();
 };
 
 // ── Archive / unarchive ────────────────────────────────────────────────────
