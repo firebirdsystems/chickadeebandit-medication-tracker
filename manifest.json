@@ -71,13 +71,15 @@
       "parent_table": "medications",
       "writer_column": "logged_by",
       "adults_bypass": true,
-      "parent_owner_actions": ["update", "delete"],
-      "retain_days": {
-        "default": 730,
-        "timestamp_column": "dose_date",
-        "id_column": "rowid",
-        "override_key": "dose_history"
-      }
+      "parent_owner_actions": ["update", "delete"]
+    }
+  },
+  "retention": {
+    "doses": {
+      "default": 730,
+      "timestamp_column": "dose_date",
+      "id_column": "rowid",
+      "override_key": "dose_history"
     }
   },
   "member_references": {
@@ -241,9 +243,6 @@
       "query": "SELECT name AS title, NULLIF(dosage, '') AS subtitle, member_id AS member_id FROM app_medication_tracker__medications WHERE archived = 0 AND reminders_on = 1 AND (started_on IS NULL OR started_on = '' OR started_on <= :today) AND (ends_on IS NULL OR ends_on = '' OR ends_on >= :today) AND (days_mask = '' OR (',' || days_mask || ',') LIKE ('%,' || CASE strftime('%w', :today) WHEN '0' THEN '7' ELSE strftime('%w', :today) END || ',%')) AND (every_n_days IS NULL OR started_on IS NULL OR started_on = '' OR (CAST(julianday(:today) - julianday(started_on) AS INTEGER) % every_n_days) = 0) ORDER BY created_at LIMIT 3"
     },
     "display": { "template": "list", "title": "title", "subtitle": "subtitle", "owner": "member_id" }
-  },
-  "resource_limits": {
-    "max_db_bytes": 52428800
   },
   "icon": "💊",
   "ai_access": {
