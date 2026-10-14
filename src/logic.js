@@ -122,11 +122,12 @@ export function rereadStillCurrent({ epochAtStart, writeEpoch, modalOpen, writes
 /**
  * Whether a failed write may be stored all the same: no answer arrived (a
  * thrown fetch carries no status), or the hub answered 400, which it also
- * gives a write that timed out and a retry that met its own first row. A 403
- * or a 507 is a clean refusal.
+ * gives a write that timed out and a retry that met its own first row, or
+ * failed on its side (a 5xx) with the write possibly stored first. A 403 or a
+ * 507 is a clean refusal.
  */
 export function writeOutcomeUnknown(error) {
-  return error?.status == null || error.status === 400;
+  return error?.status == null || error.status === 400 || (error.status >= 500 && error.status !== 507);
 }
 
 /** Whether a stored medication holds exactly the fields the form sent. */

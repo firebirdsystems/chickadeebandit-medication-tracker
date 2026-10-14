@@ -926,8 +926,9 @@ window.submitMedication = async function(existingId) {
   // It landed, and the form has been changed since: the ordinary edit carries
   // the changes (all but who it is for, which an edit cannot change), where
   // this member may edit it and it has not been archived meanwhile.
-  if (landed && modalEl === form && landed.member_id === memberId && !landed.archived
-      && canEditMedication(landed, myMember(), members, TENANT) && !storedMatchesForm(landed, sent)) {
+  const changedSince = !!landed && !storedMatchesForm(landed, sent);
+  if (changedSince && modalEl === form && landed.member_id === memberId && !landed.archived
+      && canEditMedication(landed, myMember(), members, TENANT)) {
     return window.submitMedication(id);
   }
 
@@ -955,6 +956,8 @@ window.submitMedication = async function(existingId) {
     refreshFailed = true;
   }
   render();
+  // Changes the edit above could not carry are said, not dropped in silence.
+  if (changedSince) hubAlert("Saved as first entered — check it and update what changed.");
 };
 
 // ── Archive / unarchive ────────────────────────────────────────────────────

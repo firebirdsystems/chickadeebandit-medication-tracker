@@ -618,7 +618,10 @@ describe("an add that seemed to fail", () => {
   it("is of unknown outcome with no answer or a 400, not after a clean refusal", () => {
     expect(writeOutcomeUnknown(new TypeError("Failed to fetch"))).toBe(true);
     expect(writeOutcomeUnknown(Object.assign(new Error("x"), { status: 400 }))).toBe(true);
-    for (const status of [403, 507, 200, 503]) {
+    for (const status of [500, 503]) {
+      expect(writeOutcomeUnknown(Object.assign(new Error("x"), { status }))).toBe(true);
+    }
+    for (const status of [403, 507, 200]) {
       expect(writeOutcomeUnknown(Object.assign(new Error("x"), { status }))).toBe(false);
     }
   });
