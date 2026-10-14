@@ -968,29 +968,41 @@ window.archiveMedication = async function(id, archive) {
   }
   render();
 
+  let changed;
   try {
-    const { changed } = await db(
+    ({ changed } = await db(
       `UPDATE app_medication_tracker__medications
           SET archived = ?, reminders_on = 0
         WHERE id = ?`,
       [archive ? 1 : 0, id],
-    );
-    // Only the form this came from: it may have been cancelled meanwhile.
-    if (form && modalEl === form) closeModal();
-    // The re-read puts back what is stored when the hub changed no row.
-    await Promise.all([loadMedications(), loadReminderStatus()]);
-    render();
-    if (changed === 0) hubAlert(`Could not ${label} this medication. Nothing was changed.`);
+    ));
   } catch (error) {
     medications = previousMedications;
     archivedMeds = previousArchived;
     render();
     console.error(error);
     hubAlert(`Couldn’t ${label} the medication — try again.`);
+    return;
   } finally {
     if (form) delete form.dataset.saving;
     for (const btn of formBtns) btn.disabled = false;
   }
+
+  // Only the form this came from: it may have been cancelled meanwhile.
+  if (form && modalEl === form) closeModal();
+  // The hub changed no row: back to what was there, whatever the re-read does.
+  if (changed === 0) {
+    medications = previousMedications;
+    archivedMeds = previousArchived;
+  }
+  // The re-read is not the write: failing, it must not report the write failed.
+  const [reread] = await Promise.allSettled([loadMedications(), loadReminderStatus()]);
+  if (reread.status === "rejected") {
+    console.error(reread.reason);
+    refreshFailed = true;
+  }
+  render();
+  if (changed === 0) hubAlert(`Could not ${label} this medication. Nothing was changed.`);
 };
 
 // ── Modals ─────────────────────────────────────────────────────────────────
