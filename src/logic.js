@@ -432,3 +432,24 @@ export function reportUrl(reportsUrl, id, format, from, to, base) {
   if (to) url.searchParams.set("to", to);
   return url.toString();
 }
+
+/**
+ * The line a failed write shows ("Refused, gone, or failed" in the app-template
+ * guide): "try again" only when retrying can work, and never the hub's text.
+ * `thing` and `action` are the app's own nouns. `found` is the caller's re-read
+ * after a write that changed nothing: false = the row is gone, true = it is
+ * still there (on a plain `WHERE id = ?` write the row policy narrowed it, the
+ * permission line; on a `guarded` write its state moved), null = the re-read
+ * itself failed. A `forUser` error keeps the message the app wrote for it.
+ */
+export function failureLine(e, { action, thing, found, guarded = false } = {}) {
+  if (e?.forUser) return e.message;
+  if (e?.code === "UNIQUE_CONSTRAINT" || /UNIQUE constraint failed/i.test(String(e?.message ?? ""))) return `That ${thing} already exists.`;
+  if (e?.status === 403 || (found === true && !guarded)) return `You don’t have permission to ${action}.`;
+  if (e?.status === 507) return "The household’s storage is full — free up space first.";
+  if (e?.status === 429) return "Too many tries — wait a minute and try again.";
+  if (found === null) return `Couldn’t ${action} — try again.`;
+  if (found === false || (found === undefined && e?.status === 404)) return `This ${thing} has been removed.`;
+  if (found === true || e?.status === 409) return `This ${thing} was changed by someone else — check it first.`;
+  return `Couldn’t ${action} — try again.`;
+}

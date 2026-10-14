@@ -37,8 +37,8 @@ describe("medication UI safety contract", () => {
 
   it("rejects unsuccessful DB responses and rolls optimistic dose state back", () => {
     expect(source).toContain('if (!res.ok || !body || typeof body !== "object" || body.error)');
-    expect(source).toContain("Couldn’t mark the dose taken — try again.");
-    expect(source).toContain("Couldn’t undo the dose — try again.");
+    expect(source).toContain('failureLine(error, { action: "mark the dose taken", thing: "dose" })');
+    expect(source).toContain('failureLine(error, { action: "undo the dose", thing: "dose" })');
   });
 
   it("deletes the actual stored legacy slot and lets row policy govern ownership", () => {

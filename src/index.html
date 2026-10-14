@@ -365,7 +365,7 @@ import {
   canViewMedication, managesMedications, canAddMedication, canEditMedication,
   canAssignOwner, canChooseVisibility, isPrivateMedication, VISIBILITY_FAMILY, VISIBILITY_PRIVATE,
   reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
-  writeOutcomeUnknown, storedMatchesForm,
+  writeOutcomeUnknown, storedMatchesForm, failureLine,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
   reportRange, reportUrl,
@@ -445,7 +445,7 @@ async function db(sql, params = []) {
     });
     const body = await res.json().catch(() => null);
     if (!res.ok || !body || typeof body !== "object" || body.error) {
-      throw Object.assign(new Error(body?.error || `Database request failed (${res.status})`), { status: res.status });
+      throw Object.assign(new Error(body?.error || `Database request failed (${res.status})`), { status: res.status, code: body?.code });
     }
     return body;
   } finally {
@@ -478,6 +478,14 @@ async function loadMembers() {
   // A 200 can still name a key the hub failed to read: that is a failed read too.
   if (Array.isArray(json.$errors) && json.$errors.includes("family.members")) throw new Error("Couldn’t reach the hub. Try again.");
   members = json["family.members"] ?? [];
+}
+
+// After a plain `WHERE id = ?` medication write that changed nothing: whether
+// the row is still stored (true: the row policy kept the write from this
+// member; false: it was removed; null: the read failed too).
+async function medicationFound(id) {
+  try { return !!(await db(`SELECT id FROM app_medication_tracker__medications WHERE id = ?`, [id])).rows?.[0]; }
+  catch (e) { console.error(e); return null; }
 }
 
 async function loadMedications() {
@@ -638,7 +646,7 @@ window.toggleDose = async function(medId, slot) {
       delete doses[key];
       render();
       console.error(error);
-      hubAlert("Couldn’t mark the dose taken — try again.");
+      hubAlert(failureLine(error, { action: "mark the dose taken", thing: "dose" }));
     }
   } else {
     const storedSlot = slotFromDoseKey(storedKey, TODAY);
@@ -672,7 +680,7 @@ window.toggleDose = async function(medId, slot) {
       doses[storedKey] = previous;
       render();
       console.error(error);
-      hubAlert("Couldn’t undo the dose — try again.");
+      hubAlert(failureLine(error, { action: "undo the dose", thing: "dose" }));
     }
   }
   render();
@@ -882,7 +890,7 @@ window.submitMedication = async function(existingId) {
         // or now if it was closed while the hub was answering.
         refreshOwed = true;
         settleOwedRefresh();
-        hubAlert("This medication could not be changed. Nothing was saved.");
+        hubAlert(failureLine(null, { action: "save the medication", thing: "medication", found: await medicationFound(existingId) }));
         return;
       }
     } else {
@@ -916,7 +924,7 @@ window.submitMedication = async function(existingId) {
       // The hub may have saved it and the answer been lost: re-read on close.
       refreshOwed = true;
       settleOwedRefresh();
-      hubAlert(existingId ? "Couldn’t save the medication — try again." : "Couldn’t add the medication — try again.");
+      hubAlert(failureLine(error, { action: existingId ? "save the medication" : "add the medication", thing: "medication" }));
       return;
     }
   } finally {
@@ -973,26 +981,7 @@ window.archiveMedication = async function(id, archive) {
   if (form) form.dataset.saving = "yes";
   for (const btn of formBtns) btn.disabled = true;
 
-  // Optimistic: move between medications / archivedMeds arrays
-  const previousMedications = medications.slice();
-  const previousArchived = archivedMeds.slice();
-  if (archive) {
-    const idx = medications.findIndex(m => m.id === id);
-    if (idx !== -1) {
-      const [med] = medications.splice(idx, 1);
-      archivedMeds.push(withArchivedState(med, true));
-    }
-  } else {
-    const idx = archivedMeds.findIndex(m => m.id === id);
-    if (idx !== -1) {
-      const [med] = archivedMeds.splice(idx, 1);
-      // Restoring does not silently restart a medication reminder. The editor
-      // lets the user make that choice explicitly after the row is restored.
-      medications.push(withArchivedState(med, false));
-    }
-  }
-  render();
-
+  // Nothing moves on screen until the hub has answered.
   let changed;
   try {
     ({ changed } = await db(
@@ -1002,11 +991,8 @@ window.archiveMedication = async function(id, archive) {
       [archive ? 1 : 0, id],
     ));
   } catch (error) {
-    medications = previousMedications;
-    archivedMeds = previousArchived;
-    render();
     console.error(error);
-    hubAlert(`Couldn’t ${label} the medication — try again.`);
+    hubAlert(failureLine(error, { action: `${label} the medication`, thing: "medication" }));
     return;
   } finally {
     if (form) delete form.dataset.saving;
@@ -1015,11 +1001,31 @@ window.archiveMedication = async function(id, archive) {
 
   // Only the form this came from: it may have been cancelled meanwhile.
   if (form && modalEl === form) closeModal();
-  // The hub changed no row: back to what was there, whatever the re-read does.
-  if (changed === 0) {
-    medications = previousMedications;
-    archivedMeds = previousArchived;
+  if (Number(changed) > 0) {
+    // Confirmed: move it between medications / archivedMeds as saved, so a
+    // failed re-read below leaves the saved state on screen.
+    if (archive) {
+      const idx = medications.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        const [med] = medications.splice(idx, 1);
+        archivedMeds.push(withArchivedState(med, true));
+      }
+    } else {
+      const idx = archivedMeds.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        const [med] = archivedMeds.splice(idx, 1);
+        // Restoring does not silently restart a medication reminder. The editor
+        // lets the user make that choice explicitly after the row is restored.
+        medications.push(withArchivedState(med, false));
+      }
+    }
+    render();
+  } else {
+    changed = 0;
   }
+  // Changed nothing: still stored means the row policy refused this member,
+  // gone means it was removed.
+  const found = changed === 0 ? await medicationFound(id) : undefined;
   // The re-read is not the write: failing, it must not report the write failed.
   const [reread] = await Promise.allSettled([loadMedications(), loadReminderStatus()]);
   if (reread.status === "rejected") {
@@ -1027,7 +1033,7 @@ window.archiveMedication = async function(id, archive) {
     refreshFailed = true;
   }
   render();
-  if (changed === 0) hubAlert(`Could not ${label} this medication. Nothing was changed.`);
+  if (changed === 0) hubAlert(failureLine(null, { action: `${label} the medication`, thing: "medication", found }));
 };
 
 // ── Modals ─────────────────────────────────────────────────────────────────
