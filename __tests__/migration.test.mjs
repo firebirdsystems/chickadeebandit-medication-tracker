@@ -85,7 +85,7 @@ describe("dose retention", () => {
   );
 
   it("expires dose history on an indexed, plaintext date column", () => {
-    expect(manifest.row_policies.doses.retain_days).toEqual({
+    expect(manifest.retention.doses).toEqual({
       default: 730,
       timestamp_column: "dose_date",
       id_column: "rowid",
