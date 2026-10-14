@@ -9,6 +9,7 @@ import {
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
+  writeOutcomeUnknown, storedMatchesForm,
   medicationTimes, remindersEnabled, MAX_TIMES,
   withArchivedState, searchableFields,
   isDueOn, showsToday,
@@ -610,5 +611,23 @@ describe("reportUrl", () => {
 
   it("escapes the view id", () => {
     expect(reportUrl("/r", "a/b?c", "html", "", "", base)).toBe("https://hub.example/r/a%2Fb%3Fc?format=html");
+  });
+});
+
+describe("an add that seemed to fail", () => {
+  it("is of unknown outcome with no answer or a 400, not after a clean refusal", () => {
+    expect(writeOutcomeUnknown(new TypeError("Failed to fetch"))).toBe(true);
+    expect(writeOutcomeUnknown(Object.assign(new Error("x"), { status: 400 }))).toBe(true);
+    for (const status of [403, 507, 200, 503]) {
+      expect(writeOutcomeUnknown(Object.assign(new Error("x"), { status }))).toBe(false);
+    }
+  });
+
+  it("compares the stored row with what the form sent, field by field", () => {
+    const sent = { member_id: "kid-1", name: "Iron", dosage: "", reminders_on: 1, every_n_days: 1, visibility: "family" };
+    const stored = { id: "m9", ...sent, dosage: null, reminders_on: "1", archived: 0, created_at: "stamp" };
+    expect(storedMatchesForm(stored, sent)).toBe(true);
+    expect(storedMatchesForm(stored, { ...sent, name: "Iron tablets" })).toBe(false);
+    expect(storedMatchesForm(null, sent)).toBe(false);
   });
 });

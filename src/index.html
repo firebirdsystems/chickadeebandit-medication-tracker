@@ -365,6 +365,7 @@ import {
   canViewMedication, managesMedications, canAddMedication, canEditMedication,
   canAssignOwner, canChooseVisibility, isPrivateMedication, VISIBILITY_FAMILY, VISIBILITY_PRIVATE,
   reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
+  writeOutcomeUnknown, storedMatchesForm,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
   reportRange, reportUrl,
@@ -444,7 +445,7 @@ async function db(sql, params = []) {
     });
     const body = await res.json().catch(() => null);
     if (!res.ok || !body || typeof body !== "object" || body.error) {
-      throw new Error(body?.error || `Database request failed (${res.status})`);
+      throw Object.assign(new Error(body?.error || `Database request failed (${res.status})`), { status: res.status });
     }
     return body;
   } finally {
@@ -855,6 +856,12 @@ window.submitMedication = async function(existingId) {
   // One id per form, so that trying again after an answer that never arrived
   // collides with the row the first try added instead of adding a second.
   const id = existingId || (form.dataset.newId ??= crypto.randomUUID());
+  const sent = { member_id: memberId, name, dosage, notes,
+    reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
+    every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
+    remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility };
+  // The stored row, when an add that seemed to fail turns out to have landed.
+  let landed = null;
   try {
     if (existingId) {
       // `visibility` is its owner's column alone (writable_by ["adult_owner"]):
@@ -895,14 +902,33 @@ window.submitMedication = async function(existingId) {
     }
   } catch (error) {
     console.error(error);
-    // The hub may have saved it and the answer been lost: re-read on close.
-    refreshOwed = true;
-    settleOwedRefresh();
-    hubAlert(existingId ? "Couldn’t save the medication — try again." : "Couldn’t add the medication — try again.");
-    return;
+    // An add whose answer never came, or whose retry the hub turned away, may
+    // be stored: reading the row by the form's id decides, not the error.
+    if (!existingId && writeOutcomeUnknown(error)) {
+      landed = await db(
+        `SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
+                days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
+                archived, created_at
+         FROM app_medication_tracker__medications WHERE id = ?`, [id]
+      ).then(res => res.rows?.[0] ?? null, () => null);
+    }
+    if (!landed) {
+      // The hub may have saved it and the answer been lost: re-read on close.
+      refreshOwed = true;
+      settleOwedRefresh();
+      hubAlert(existingId ? "Couldn’t save the medication — try again." : "Couldn’t add the medication — try again.");
+      return;
+    }
   } finally {
     delete form.dataset.saving;
     for (const btn of formBtns) btn.disabled = false;
+  }
+  // It landed, and the form has been changed since: the ordinary edit carries
+  // the changes (all but who it is for, which an edit cannot change), where
+  // this member may edit it and it has not been archived meanwhile.
+  if (landed && modalEl === form && landed.member_id === memberId && !landed.archived
+      && canEditMedication(landed, myMember(), members, TENANT) && !storedMatchesForm(landed, sent)) {
+    return window.submitMedication(id);
   }
 
   // Saved. Drawn from what was sent, then from what is stored.
@@ -917,11 +943,7 @@ window.submitMedication = async function(existingId) {
         ...(choosesVisibility ? { visibility } : {}) };
     }
   } else {
-    medications.push({ id, member_id: memberId, name, dosage, notes,
-      reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
-      every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-      remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility,
-      archived: 0, created_at: now });
+    if (!medications.some(m => m.id === id)) medications.push(landed ?? { id, ...sent, archived: 0, created_at: now });
   }
   // Only the form this save came from: it may have been cancelled meanwhile.
   if (modalEl === form) closeModal();

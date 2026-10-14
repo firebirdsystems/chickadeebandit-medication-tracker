@@ -120,6 +120,21 @@ export function rereadStillCurrent({ epochAtStart, writeEpoch, modalOpen, writes
 }
 
 /**
+ * Whether a failed write may be stored all the same: no answer arrived (a
+ * thrown fetch carries no status), or the hub answered 400, which it also
+ * gives a write that timed out and a retry that met its own first row. A 403
+ * or a 507 is a clean refusal.
+ */
+export function writeOutcomeUnknown(error) {
+  return error?.status == null || error.status === 400;
+}
+
+/** Whether a stored medication holds exactly the fields the form sent. */
+export function storedMatchesForm(stored, sent) {
+  return Object.keys(sent).every(key => String(stored?.[key] ?? "") === String(sent[key] ?? ""));
+}
+
+/**
  * A medication's schedule as clock times.
  *
  * Falls back to mapping the legacy `schedule_slots` when `reminder_times` is
