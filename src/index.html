@@ -152,6 +152,7 @@
     .med-name { font-weight: 600; font-size: 0.95rem; }
     .med-dosage { font-size: 0.8rem; color: var(--muted); }
     .med-notes { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-style: italic; }
+    .refill-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-style: normal; }
     .med-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
     /* ── Slot pills ──────────────────────────────────────── */
@@ -369,6 +370,7 @@ import {
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember, searchableFields, showsToday,
   reportRange, reportUrl,
+  isIsoDate, nextRefillOn, refillStatus, refillLine, REFILL_SOON_DAYS,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -424,7 +426,8 @@ const DEMO_MEMBERS = [
   { id: "kid-2",    name: "Casey",  role: "child" },
 ];
 const DEMO_MEDS = [
-  { id: "m1", member_id: "parent-1", name: "Vitamin D",      dosage: "2000 IU",  notes: "",               reminder_times: '["08:00"]',          reminders_on: 1, archived: 0, created_at: "2026-01-01T00:00:00Z" },
+  { id: "m1", member_id: "parent-1", name: "Vitamin D",      dosage: "2000 IU",  notes: "",               reminder_times: '["08:00"]',          reminders_on: 1, archived: 0, created_at: "2026-01-01T00:00:00Z",
+    prescriber: "Dr. Rivera", pharmacy: "Main St Pharmacy", refill_on: nextRefillOn(TODAY, 3), refill_every_days: 90 },
   { id: "m2", member_id: "kid-1",    name: "Allergy Tablet",  dosage: "10mg",     notes: "Take with food", reminder_times: '["08:00","18:00"]',  reminders_on: 1, archived: 0, created_at: "2026-01-01T00:00:00Z" },
   { id: "m3", member_id: "kid-2",    name: "Vitamin C",       dosage: "250mg",    notes: "",               reminder_times: '["08:00"]',          reminders_on: 0, archived: 0, created_at: "2026-01-01T00:00:00Z" },
 ];
@@ -488,6 +491,18 @@ async function medicationFound(id) {
   catch (e) { console.error(e); return null; }
 }
 
+// After a save guarded on the archive state the form was opened against:
+// true when the row is still stored with that state (the row policy refused
+// the write), "moved" when someone archived or restored it meanwhile, false
+// when it is gone, null when the read failed.
+async function medicationFoundAs(id, archived) {
+  try {
+    const row = (await db(`SELECT id, archived FROM app_medication_tracker__medications WHERE id = ?`, [id])).rows?.[0];
+    if (!row) return false;
+    return Number(row.archived) === (archived ? 1 : 0) ? true : "moved";
+  } catch (e) { console.error(e); return null; }
+}
+
 async function loadMedications() {
   if (!DB) {
     // Seeded once: the demo stores nothing, so a later call (the re-read after
@@ -510,10 +525,12 @@ async function fetchMedications() {
   const [active, archived] = await Promise.all([
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
                days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
+               prescriber, pharmacy, refill_on, refill_every_days,
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC`),
     db(`SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
                days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
+               prescriber, pharmacy, refill_on, refill_every_days,
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
@@ -771,6 +788,28 @@ function scheduleEditorHtml(times, remindersOn, med = {}) {
         Leave everyone unchecked to disable missed-dose escalation for this medication.
       </div>
     </div>
+    <div class="form-group">
+      <label>Prescriber <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-prescriber" type="text" value="${esc(med.prescriber ?? "")}" placeholder="e.g. Dr. Rivera" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>Pharmacy <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-pharmacy" type="text" value="${esc(med.pharmacy ?? "")}" placeholder="e.g. Main St Pharmacy" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>Next refill <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <div class="form-row">
+        <input id="f-refill-on" type="date" value="${esc(med.refill_on ?? "")}" aria-label="Next refill due" ${med.archived ? "disabled" : ""} />
+        <input id="f-refill-every-days" type="number" min="1" max="366" placeholder="Every N days"
+               aria-label="Refill every N days" value="${esc(String(med.refill_every_days ?? ""))}" ${med.archived ? "disabled" : ""} />
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        ${med.archived
+          ? "An archived medication is not refilled. Restore it to set the next refill."
+          : `The person it is for, and the adults who can see it, get an email ${REFILL_SOON_DAYS} days before a refill
+        is due. Pressing Refilled moves the date on by the number of days.`}
+      </div>
+    </div>
   `;
 }
 
@@ -839,6 +878,21 @@ window.submitMedication = async function(existingId) {
     hubAlert("The end date must be on or after the start date.");
     return;
   }
+  const prescriber = document.getElementById("f-prescriber")?.value.trim() ?? "";
+  const pharmacy   = document.getElementById("f-pharmacy")?.value.trim() ?? "";
+  // An archived medication is on no list, so it must never be the source of a
+  // refill email either: its date is dropped whatever the form says.
+  const refillOn   = isArchived ? "" : (document.getElementById("f-refill-on")?.value ?? "");
+  if (refillOn && !isIsoDate(refillOn)) {
+    hubAlert("Pick a valid refill date.");
+    return;
+  }
+  const refillEveryRaw = document.getElementById("f-refill-every-days")?.value.trim() ?? "";
+  const refillEveryDays = refillEveryRaw === "" ? null : Number(refillEveryRaw);
+  if (refillEveryDays !== null && (!Number.isInteger(refillEveryDays) || refillEveryDays < 1 || refillEveryDays > 366)) {
+    hubAlert("Refill every N days must be between 1 and 366.");
+    return;
+  }
   // Only the person a medication is for keeps it private; one added for
   // someone else is shared, so the adults who added it can keep it.
   const choosesVisibility = canChooseVisibility(memberId, myMember());
@@ -867,30 +921,45 @@ window.submitMedication = async function(existingId) {
   const sent = { member_id: memberId, name, dosage, notes,
     reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
     every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
-    remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility };
+    remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds, visibility,
+    prescriber, pharmacy, refill_on: refillOn, refill_every_days: refillEveryDays };
   // The stored row, when an add that seemed to fail turns out to have landed.
   let landed = null;
   try {
     if (existingId) {
+      // A new refill date is a new occurrence: the hub's reminder stamp from
+      // the old one must not count against it (it would, when the new date is
+      // within the lead window of the old email). An unchanged date keeps the
+      // stamp, so an unrelated edit cannot cause a second email.
+      const before = [...medications, ...archivedMeds].find(m => m.id === existingId);
+      const refillDateChanged = String(before?.refill_on ?? "") !== refillOn;
       // `visibility` is its owner's column alone (writable_by ["adult_owner"]):
       // naming it in anyone else's UPDATE would make the hub change no row.
       const { changed } = await db(
         `UPDATE app_medication_tracker__medications
             SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
                 days_mask=?, every_n_days=?, started_on=?, ends_on=?,
-                remind_member_ids=?, buddy_member_ids=?${choosesVisibility ? ", visibility=?" : ""}
-         WHERE id=?`,
+                remind_member_ids=?, buddy_member_ids=?,
+                prescriber=?, pharmacy=?, refill_on=?, refill_every_days=?${refillDateChanged ? ", refill_reminded_at=NULL" : ""}${choosesVisibility ? ", visibility=?" : ""}
+         WHERE id=? AND archived=?`,
         [name, dosage, notes, timesJson, remindersOn, daysMask, everyNDays,
           startedOn, endsOn, remindMemberIds, buddyMemberIds,
-          ...(choosesVisibility ? [visibility] : []), existingId]
+          prescriber, pharmacy, refillOn, refillEveryDays,
+          ...(choosesVisibility ? [visibility] : []), existingId, isArchived ? 1 : 0]
       );
       if (changed === 0) {
         // The list behind the form may be out of date (the medication may no
-        // longer be this member's to change): re-read it when the form closes,
+        // longer be this member's to change, or someone archived or restored
+        // it while the form was open: `isArchived` is the page's state, and
+        // the guard above keeps a stale form from writing reminders or a
+        // refill date onto an archived row): re-read it when the form closes,
         // or now if it was closed while the hub was answering.
         refreshOwed = true;
         settleOwedRefresh();
-        hubAlert(failureLine(null, { action: "save the medication", thing: "medication", found: await medicationFound(existingId) }));
+        const found = await medicationFoundAs(existingId, isArchived);
+        hubAlert(found === "moved"
+          ? `This medication was ${isArchived ? "restored" : "archived"} by someone else — check it first.`
+          : failureLine(null, { action: "save the medication", thing: "medication", found }));
         return;
       }
     } else {
@@ -900,10 +969,12 @@ window.submitMedication = async function(existingId) {
         `INSERT INTO app_medication_tracker__medications
            (id, member_id, name, dosage, notes, reminder_times, reminders_on,
             days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids,
+            prescriber, pharmacy, refill_on, refill_every_days,
             ${choosesVisibility ? "visibility, " : ""}archived, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${choosesVisibility ? "?, " : ""}0, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${choosesVisibility ? "?, " : ""}0, ?)`,
         [id, memberId, name, dosage, notes, timesJson, remindersOn,
           daysMask, everyNDays, startedOn, endsOn, remindMemberIds, buddyMemberIds,
+          prescriber, pharmacy, refillOn, refillEveryDays,
           ...(choosesVisibility ? [visibility] : []), now]
       );
       if (changed === 0) throw new Error("The hub added no medication row");
@@ -916,6 +987,7 @@ window.submitMedication = async function(existingId) {
       landed = await db(
         `SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on,
                 days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility,
+                prescriber, pharmacy, refill_on, refill_every_days,
                 archived, created_at
          FROM app_medication_tracker__medications WHERE id = ?`, [id]
       ).then(res => res.rows?.[0] ?? null, () => null);
@@ -949,6 +1021,7 @@ window.submitMedication = async function(existingId) {
         reminder_times: timesJson, reminders_on: remindersOn, days_mask: daysMask,
         every_n_days: everyNDays, started_on: startedOn, ends_on: endsOn,
         remind_member_ids: remindMemberIds, buddy_member_ids: buddyMemberIds,
+        prescriber, pharmacy, refill_on: refillOn, refill_every_days: refillEveryDays,
         ...(choosesVisibility ? { visibility } : {}) };
     }
   } else {
@@ -981,12 +1054,14 @@ window.archiveMedication = async function(id, archive) {
   if (form) form.dataset.saving = "yes";
   for (const btn of formBtns) btn.disabled = true;
 
-  // Nothing moves on screen until the hub has answered.
+  // Nothing moves on screen until the hub has answered. Archiving also drops
+  // the refill date: an archived medication is on no list, so nobody should
+  // be emailed to refill it. Restoring leaves the date for the editor to set.
   let changed;
   try {
     ({ changed } = await db(
       `UPDATE app_medication_tracker__medications
-          SET archived = ?, reminders_on = 0
+          SET archived = ?, reminders_on = 0${archive ? ", refill_on = ''" : ""}
         WHERE id = ?`,
       [archive ? 1 : 0, id],
     ));
@@ -1008,7 +1083,7 @@ window.archiveMedication = async function(id, archive) {
       const idx = medications.findIndex(m => m.id === id);
       if (idx !== -1) {
         const [med] = medications.splice(idx, 1);
-        archivedMeds.push(withArchivedState(med, true));
+        archivedMeds.push(withArchivedState({ ...med, refill_on: "" }, true));
       }
     } else {
       const idx = archivedMeds.findIndex(m => m.id === id);
@@ -1035,6 +1110,67 @@ window.archiveMedication = async function(id, archive) {
   render();
   if (changed === 0) hubAlert(failureLine(null, { action: `${label} the medication`, thing: "medication", found }));
 };
+
+// ── Refills ────────────────────────────────────────────────────────────────
+// A refill was picked up today: the next date is the interval on from today,
+// or nothing when there is no interval, which stops the reminders until a
+// date is entered again. The hub's reminder stamp is cleared with it: the
+// next date is a new occurrence, and with a short interval the old stamp
+// would fall inside its lead window and silence the email.
+window.markRefilled = async function(id) {
+  const med = medications.find(m => m.id === id);
+  const status = refillStatus(med, TODAY);
+  if (!status) return;
+  const next = nextRefillOn(TODAY, med.refill_every_days);
+  const ok = await hubConfirm({
+    message: next
+      ? `Refilled today? The next refill will be due ${next}.`
+      : "Refilled today? No interval is set, so no next refill date will be kept.",
+    confirmLabel: "Refilled",
+  });
+  if (!ok) return;
+  let changed;
+  try {
+    // Guarded on the date it was refilled from: a second tap, or another
+    // adult's, finds the date already moved and changes nothing.
+    ({ changed } = await db(
+      `UPDATE app_medication_tracker__medications
+          SET refill_on = ?, refill_reminded_at = NULL
+        WHERE id = ? AND refill_on = ?`,
+      [next, id, status.on],
+    ));
+  } catch (error) {
+    console.error(error);
+    hubAlert(failureLine(error, { action: "record the refill", thing: "medication" }));
+    return;
+  }
+  if (Number(changed) > 0) {
+    med.refill_on = next;
+    render();
+  }
+  const found = Number(changed) > 0 ? undefined : await medicationFound(id);
+  const [reread] = await Promise.allSettled([loadMedications()]);
+  if (reread.status === "rejected") {
+    console.error(reread.reason);
+    refreshFailed = true;
+  }
+  render();
+  if (!(Number(changed) > 0)) hubAlert(failureLine(null, { action: "record the refill", thing: "medication", found, guarded: true }));
+};
+
+// The refill line under a medication, and the Refilled button for whoever
+// may edit it. On the Today tab only a refill that is near or overdue is
+// said; the Manage tab says every tracked one.
+function refillHtml(med, canEdit, { onlyWhenNear } = {}) {
+  const status = refillStatus(med, TODAY);
+  if (!status || (onlyWhenNear && !status.soon && !status.overdue)) return "";
+  const kind = status.overdue ? "overdue" : status.soon ? "soon" : "later";
+  const btn = canEdit && !med.archived
+    ? ` <button class="btn btn-ghost btn-sm" data-testid="refilled" data-action="refilled" data-med-id="${esc(med.id)}">Refilled</button>`
+    : "";
+  return `<div class="med-notes refill-line" data-testid="refill-line" data-refill="${kind}">${
+    status.overdue || status.soon ? `<strong>${esc(refillLine(status))}</strong>` : esc(refillLine(status))}${btn}</div>`;
+}
 
 // ── Modals ─────────────────────────────────────────────────────────────────
 function openModal(html) {
@@ -1228,6 +1364,7 @@ function medRowHtml(med, showEditBtn = false) {
           ${med.dosage ? `<div class="med-dosage">${esc(med.dosage)}</div>` : ""}
           ${med.notes ? `<div class="med-notes">${esc(med.notes)}</div>` : ""}
           ${notMonitored ? `<div class="med-notes"><strong>Reminder not monitored — turn another reminder off or upgrade.</strong></div>` : ""}
+          ${refillHtml(med, showEditBtn, { onlyWhenNear: true })}
         </div>
         <div class="med-actions">${editBtn}</div>
       </div>
@@ -1328,6 +1465,7 @@ function renderManage(me) {
         <div class="manage-info">
           <div class="name">${esc(med.name)}${med.dosage ? ` <span style="font-weight:400;color:var(--muted)">${esc(med.dosage)}</span>` : ""}</div>
           <div class="meta">${esc(owner?.name ?? "Unknown")} · ${esc(slotLabels)}${remindersOff}${privateNote}${med.archived ? " · <em>archived</em>" : ""}</div>
+          ${refillHtml(med, canEdit)}
         </div>
         ${med.archived ? `<span class="archived-badge">Archived</span>` : ""}
         ${editBtn}
@@ -1372,7 +1510,7 @@ function printCardHtml() {
       </div>`;
   return `
     <div class="card" data-testid="print-card" style="margin-top:14px">
-      ${row("current_medications", "Current medications", "Every medication being taken today, with its dose, times and days, by person. The list to hand a doctor or a pharmacist.")}
+      ${row("current_medications", "Current medications", "Every medication being taken today, with its dose, times, days, prescriber, pharmacy and next refill, by person. The list to hand a doctor or a pharmacist.")}
       ${row("doses_taken", "Doses taken", `Every dose ticked off in the last ${PRINT_DAYS} days.`)}
     </div>`;
 }
@@ -1469,6 +1607,7 @@ document.addEventListener("click", (e) => {
     case "toggle-dose": window.toggleDose(el.dataset.medId, el.dataset.slot); break;
     case "edit-med":    window.openEditModal(el.dataset.medId); break;
     case "archive-med": window.archiveMedication(el.dataset.medId, el.dataset.archived === "true"); break;
+    case "refilled":    window.markRefilled(el.dataset.medId); break;
     case "save-med":    window.submitMedication(el.dataset.medId ?? null); break;
     case "add-time":    window.addEditorTime(); break;
     case "remove-time": window.removeEditorTime(el.dataset.time); break;

@@ -17,14 +17,15 @@
   },
   "storage": "db",
   "preload": {
-    "active": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, archived, created_at FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC"},
-    "archived": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, archived, created_at FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC"},
+    "active": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, prescriber, pharmacy, refill_on, refill_every_days, archived, created_at FROM app_medication_tracker__medications WHERE archived = 0 ORDER BY created_at ASC"},
+    "archived": {"sql": "SELECT id, member_id, name, dosage, notes, schedule_slots, reminder_times, reminders_on, days_mask, every_n_days, started_on, ends_on, remind_member_ids, buddy_member_ids, visibility, prescriber, pharmacy, refill_on, refill_every_days, archived, created_at FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC"},
     "doses": {"sql": "SELECT medication_id, dose_date, slot, logged_by FROM app_medication_tracker__doses WHERE dose_date = ?", "params": [":today"]}
   },
   "contexts": ["household", "shared_space", "shared_space.roster"],
-  "required_capabilities": ["cron"],
+  "required_capabilities": ["cron", "email"],
   "db_plaintext_columns": [
     "slot",
+    "refill_on",
     "reminder_times",
     "days_mask",
     "started_on",
@@ -61,6 +62,11 @@
         "remind_member_ids": { "writable_by": ["adult"] },
         "buddy_member_ids": { "writable_by": ["adult"] },
         "visibility": { "writable_by": ["adult_owner"] },
+        "prescriber": { "writable_by": ["adult"] },
+        "pharmacy": { "writable_by": ["adult"] },
+        "refill_on": { "writable_by": ["adult"] },
+        "refill_every_days": { "writable_by": ["adult"] },
+        "refill_reminded_at": { "writable_by": ["adult"] },
         "archived": { "writable_by": ["adult"] },
         "created_at": { "writable_by": ["adult"] }
       }
@@ -128,16 +134,28 @@
       "event": "medication.dose_missed"
     }
   },
+  "date_reminders": {
+    "table": "medications",
+    "date_column": "refill_on",
+    "default_lead_days": 5,
+    "title_column": "name",
+    "owner_column": "member_id",
+    "visibility_column": "visibility",
+    "everyone_values": ["family"],
+    "household_audience": "adults",
+    "last_reminded_column": "refill_reminded_at",
+    "on_no_recipients": "skip"
+  },
   "publishes": ["medication.dose_taken"],
   "reports": {
     "views": [
       {
         "id": "current_medications",
         "title": "Medication list",
-        "description": "Every medication in course during the period, by person: the dose, the times of day, which days, the course dates and any notes. A course that ended before the period or starts after it is left out, and so are archived medications. An interval is counted from the start date.",
+        "description": "Every medication in course during the period, by person: the dose, the times of day, which days, the course dates, who prescribes it, where it is filled, when the next refill is due and any notes. A course that ended before the period or starts after it is left out, and so are archived medications. An interval is counted from the start date.",
         "source": {
           "kind": "sql",
-          "query": "SELECT m.member_id AS person, m.name AS medication, m.dosage AS dose, REPLACE(REPLACE(REPLACE(REPLACE(m.reminder_times, '[', ''), ']', ''), '\"', ''), ',', ', ') AS times, CASE WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' AND m.days_mask = '' THEN 'Every ' || m.every_n_days || ' days' WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' THEN 'Every ' || m.every_n_days || ' days, only on ' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') WHEN m.days_mask = '' THEN 'Every day' ELSE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') END AS days, m.started_on AS started, m.ends_on AS ends, m.notes AS notes FROM app_medication_tracker__medications m WHERE m.archived = 0 AND (m.started_on IS NULL OR m.started_on = '' OR m.started_on <= :range_end) AND (m.ends_on IS NULL OR m.ends_on = '' OR m.ends_on >= :range_start) ORDER BY m.member_id, m.created_at"
+          "query": "SELECT m.member_id AS person, m.name AS medication, m.dosage AS dose, REPLACE(REPLACE(REPLACE(REPLACE(m.reminder_times, '[', ''), ']', ''), '\"', ''), ',', ', ') AS times, CASE WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' AND m.days_mask = '' THEN 'Every ' || m.every_n_days || ' days' WHEN m.every_n_days > 1 AND m.started_on IS NOT NULL AND m.started_on <> '' THEN 'Every ' || m.every_n_days || ' days, only on ' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') WHEN m.days_mask = '' THEN 'Every day' ELSE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(m.days_mask, '1', 'Mon'), '2', 'Tue'), '3', 'Wed'), '4', 'Thu'), '5', 'Fri'), '6', 'Sat'), '7', 'Sun'), ',', ', ') END AS days, m.started_on AS started, m.ends_on AS ends, m.prescriber AS prescriber, m.pharmacy AS pharmacy, m.refill_on AS refill, m.notes AS notes FROM app_medication_tracker__medications m WHERE m.archived = 0 AND (m.started_on IS NULL OR m.started_on = '' OR m.started_on <= :range_end) AND (m.ends_on IS NULL OR m.ends_on = '' OR m.ends_on >= :range_start) ORDER BY m.member_id, m.created_at"
         },
         "columns": [
           {
@@ -169,6 +187,19 @@
           {
             "key": "ends",
             "label": "Ends",
+            "format": "date"
+          },
+          {
+            "key": "prescriber",
+            "label": "Prescriber"
+          },
+          {
+            "key": "pharmacy",
+            "label": "Pharmacy"
+          },
+          {
+            "key": "refill",
+            "label": "Next refill",
             "format": "date"
           },
           {

@@ -150,3 +150,31 @@ describe("migration 006 reminder recipients", () => {
     ]);
   });
 });
+
+describe("migration 007 refills", () => {
+  it("adds refill and prescriber columns that an existing row reads as untracked and blank", () => {
+    const db = database();
+    for (const name of ["001_init.sql", "002_indexes.sql", "003_schedule_reminders.sql",
+      "004_dose_dosage.sql", "005_visibility.sql", "006_reminder_recipients_default.sql"]) sql(db, migration(name));
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications
+        (id, member_id, name, reminders_on, created_at)
+      VALUES ('old', 'm1', 'Before refills', 1, '2026-01-01');
+    `);
+
+    sql(db, migration("007_refills.sql"));
+
+    expect(rows(db, `SELECT id, prescriber, pharmacy, refill_on, refill_every_days, refill_reminded_at
+                       FROM app_medication_tracker__medications`)).toEqual([
+      { id: "old", prescriber: "", pharmacy: "", refill_on: null, refill_every_days: null, refill_reminded_at: null },
+    ]);
+    // A row the app writes after the migration carries what the form sent.
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications
+        (id, member_id, name, reminders_on, created_at, prescriber, pharmacy, refill_on, refill_every_days)
+      VALUES ('new', 'm1', 'Tracked', 1, '2026-01-02', 'Dr. Rivera', 'Main St', '2026-02-01', 30);
+    `);
+    expect(rows(db, `SELECT refill_on, refill_every_days FROM app_medication_tracker__medications WHERE id = 'new'`))
+      .toEqual([{ refill_on: "2026-02-01", refill_every_days: 30 }]);
+  });
+});

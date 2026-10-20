@@ -19,13 +19,18 @@ Track daily medications for every family member. Check off doses as they're take
   undo one. Who a medication is for never changes once it is added.
 - Adults add medications for themselves and for the children. In a shared space, every adult adds
   their own, and the steward adds for anyone; in a roster, the steward keeps the whole list.
+- A medication can carry its prescriber, its pharmacy and the day its next refill is due. Five days
+  before that day the hub emails the person it is for and the adults who can see the medication (a
+  private one reminds its owner alone), and the Today tab says "Refill due in 2 days" until it is
+  dealt with. Pressing **Refilled** moves the date on by the medication's refill interval, or clears
+  it when there is none. Archiving a medication drops its refill date.
 
 ## Printed lists
 
 The Manage tab offers two documents, rendered by the hub from the manifest's `reports`:
 
-- **Current medications**: every medication being taken today, with its dose, times and days, by
-  person. The list to hand a doctor or a pharmacist. A course that has ended or has not started is
+- **Current medications**: every medication being taken today, with its dose, times, days,
+  prescriber, pharmacy and next refill, by person. The list to hand a doctor or a pharmacist. A course that has ended or has not started is
   left out, and so are archived medications.
 - **Doses taken**: every dose ticked off in the last 90 days, by person. A dose that was not ticked
   does not appear. Each tick keeps the dose the medication had at the time, so a later change of

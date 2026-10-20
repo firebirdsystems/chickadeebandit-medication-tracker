@@ -390,7 +390,58 @@ export function groupByMember(medications) {
  * how to take it.
  */
 export function searchableFields(item) {
-  return [item.name, item.dosage, item.notes];
+  return [item.name, item.dosage, item.notes, item.prescriber, item.pharmacy];
+}
+
+// ── Refills ──────────────────────────────────────────────────────────────────
+
+/** Days ahead of a refill the page calls it "soon". The manifest's
+ *  date_reminders.default_lead_days is the same number, so the badge and the
+ *  email agree on when a refill starts to matter. */
+export const REFILL_SOON_DAYS = 5;
+
+/** "yyyy-mm-dd" naming a real day. */
+export function isIsoDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ""));
+  if (!match) return false;
+  const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return day.toISOString().slice(0, 10) === match[0];
+}
+
+/**
+ * The day the next refill falls due once one is picked up today: `everyDays`
+ * on from the household's day. "" when there is no interval to count, or no
+ * day to count from, so the medication stops being tracked for refills until
+ * someone enters the next date.
+ */
+export function nextRefillOn(todayStr, everyDays) {
+  const every = Number(everyDays);
+  if (!Number.isInteger(every) || every < 1 || every > 366) return "";
+  return daysBefore(todayStr, -every);
+}
+
+/**
+ * Where a medication stands on its refill as of the household's day, or null
+ * when none is tracked (no date, or not a date). `daysUntil` is negative once
+ * it is overdue.
+ */
+export function refillStatus(med, todayStr) {
+  const on = String(med?.refill_on ?? "");
+  if (!isIsoDate(on)) return null;
+  const daysUntil = daysBetween(todayStr, on);
+  if (daysUntil === null) return null;
+  return { on, daysUntil, overdue: daysUntil < 0, soon: daysUntil >= 0 && daysUntil <= REFILL_SOON_DAYS };
+}
+
+/** The words a refill status is shown as; "" for none. */
+export function refillLine(status) {
+  if (!status) return "";
+  const n = Math.abs(status.daysUntil);
+  const days = `${n} day${n === 1 ? "" : "s"}`;
+  if (status.daysUntil === 0) return "Refill due today";
+  if (status.overdue) return `Refill overdue by ${days}`;
+  if (status.soon) return `Refill due in ${days}`;
+  return `Refill due ${status.on}`;
 }
 
 // ── Printed lists ─────────────────────────────────────────────────────────────

@@ -10,6 +10,10 @@ SELECT
   m.every_n_days,
   m.started_on,
   m.ends_on,
+  m.prescriber,
+  m.pharmacy,
+  m.refill_on,
+  m.refill_every_days,
   m.archived,
   m.created_at
 FROM app_medication_tracker__medications m

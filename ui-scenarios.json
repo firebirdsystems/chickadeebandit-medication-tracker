@@ -12,28 +12,109 @@
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('ui-own', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z'), ('ui-kid', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:01Z'), ('ui-adm', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:02Z')",
           "params": [
-            "{{parent}}", "Vitamin D", "2000 IU", "[\"08:00\"]",
-            "{{kid}}", "Allergy Tablet", "10mg", "[\"08:00\"]",
-            "{{owner}}", "Lisinopril", "20mg", "[\"08:00\"]"
+            "{{parent}}",
+            "Vitamin D",
+            "2000 IU",
+            "[\"08:00\"]",
+            "{{kid}}",
+            "Allergy Tablet",
+            "10mg",
+            "[\"08:00\"]",
+            "{{owner}}",
+            "Lisinopril",
+            "20mg",
+            "[\"08:00\"]"
           ]
         },
-        { "action": "open", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-own\"] [data-testid=\"edit-med\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "as": "parent" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]", "count": 0, "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "parent" },
-        { "action": "click", "selector": "[data-testid=\"tab-manage\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "as": "parent" },
-        { "action": "expectCount", "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]", "count": 0, "as": "parent" },
-        { "action": "expectCount", "selector": "[data-testid=\"print-card\"] [data-testid=\"print-row\"]", "count": 2, "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"print-row\"][data-report=\"current_medications\"] [data-format=\"csv\"]", "as": "parent" },
-        { "action": "open", "as": "kid" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "kid" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]", "count": 0, "as": "kid" },
-        { "action": "expectCount", "selector": "[data-testid=\"tab-manage\"]", "count": 0, "as": "kid" },
-        { "action": "expectCount", "selector": "[data-testid=\"print-card\"]", "count": 0, "as": "kid" }
+        {
+          "action": "open",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-own\"] [data-testid=\"edit-med\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]",
+          "count": 0,
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-adm\"] [data-testid=\"edit-med\"]",
+          "count": 0,
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"print-card\"] [data-testid=\"print-row\"]",
+          "count": 2,
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"print-row\"][data-report=\"current_medications\"] [data-format=\"csv\"]",
+          "as": "parent"
+        },
+        {
+          "action": "open",
+          "as": "kid"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]",
+          "as": "kid"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-kid\"] [data-testid=\"edit-med\"]",
+          "count": 0,
+          "as": "kid"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "count": 0,
+          "as": "kid"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"print-card\"]",
+          "count": 0,
+          "as": "kid"
+        }
       ]
     },
     {
@@ -45,22 +126,65 @@
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at) VALUES ('ui-bid', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z')",
-          "params": ["{{parent}}", "Amoxicillin", "250mg", "[\"08:00\",\"20:00\"]"]
+          "params": [
+            "{{parent}}",
+            "Amoxicillin",
+            "250mg",
+            "[\"08:00\",\"20:00\"]"
+          ]
         },
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('ui-bid', date('now'), 'morning', datetime('now'), ?)",
-          "params": ["{{parent}}"]
+          "params": [
+            "{{parent}}"
+          ]
         },
-        { "action": "open", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"08:00\"][data-taken=\"yes\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"no\"]", "as": "parent" },
-        { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 0, "as": "parent" },
-        { "action": "click", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"]", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
-        { "action": "reload", "as": "parent" },
-        { "action": "expectVisible", "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]", "as": "parent" },
-        { "action": "expectCount", "selector": "[data-testid=\"all-done\"]", "count": 1, "as": "parent" }
+        {
+          "action": "open",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"08:00\"][data-taken=\"yes\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"no\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"all-done\"]",
+          "count": 0,
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]",
+          "as": "parent"
+        },
+        {
+          "action": "reload",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-bid\"][data-slot=\"20:00\"][data-taken=\"yes\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"all-done\"]",
+          "count": 1,
+          "as": "parent"
+        }
       ]
     },
     {
@@ -76,53 +200,358 @@
           "action": "seedRaw",
           "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, visibility, created_at) VALUES ('sp-pat', ?, ?, ?, ?, 0, 0, 'family', '2026-01-01T00:00:00Z'), ('sp-sam', ?, ?, ?, ?, 0, 0, 'family', '2026-01-01T00:00:01Z'), ('sp-sam-own', ?, ?, ?, ?, 0, 0, 'private', '2026-01-01T00:00:02Z')",
           "params": [
-            "{{pat}}", "Vitamin D", "2000 IU", "[\"08:00\"]",
-            "{{sam}}", "Lisinopril", "20mg", "[\"08:00\"]",
-            "{{sam}}", "Sertraline", "50mg", "[\"21:00\"]"
+            "{{pat}}",
+            "Vitamin D",
+            "2000 IU",
+            "[\"08:00\"]",
+            "{{sam}}",
+            "Lisinopril",
+            "20mg",
+            "[\"08:00\"]",
+            "{{sam}}",
+            "Sertraline",
+            "50mg",
+            "[\"21:00\"]"
           ]
         },
         {
           "action": "seedRaw",
           "sql": "UPDATE app_medication_tracker__medications SET remind_member_ids = ?, buddy_member_ids = ? WHERE id = 'sp-pat'",
-          "params": ["[\"{{sam}}\",\"{{steward}}\"]", "[\"{{sam}}\"]"]
+          "params": [
+            "[\"{{sam}}\",\"{{steward}}\"]",
+            "[\"{{sam}}\"]"
+          ]
         },
-        { "action": "open", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"]", "count": 0, "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 2, "as": "pat" },
-        { "action": "expectCount", "selector": "[data-testid=\"steward-note\"]", "count": 0, "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"tab-manage\"]", "as": "pat" },
-        { "action": "click", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "pat" },
-        { "action": "expectHidden", "selector": "[data-testid=\"f-visibility\"]", "as": "pat" },
-        { "action": "click", "selector": ".modal-actions .btn-ghost", "as": "pat" },
-        { "action": "click", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"f-visibility\"]", "as": "pat" },
-        { "action": "expectHidden", "selector": "[data-testid=\"private-recipients-note\"]", "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 0, "as": "pat" },
-        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "private", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"private-recipients-note\"]", "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 2, "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:not(:disabled)", "count": 1, "as": "pat" },
-        { "action": "expectCount", "selector": ".f-buddy-member:disabled", "count": 2, "as": "pat" },
-        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "family", "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:disabled", "count": 0, "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:checked", "count": 2, "as": "pat" },
-        { "action": "expectCount", "selector": ".f-buddy-member:checked", "count": 1, "as": "pat" },
-        { "action": "select", "selector": "[data-testid=\"f-visibility\"]", "value": "private", "as": "pat" },
-        { "action": "expectCount", "selector": ".f-remind-member:checked", "count": 0, "as": "pat" },
-        { "action": "click", "selector": ".modal-actions [data-action=\"save-med\"]", "as": "pat" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"][data-visibility=\"private\"] [data-testid=\"private-badge\"]", "as": "pat" },
-        { "action": "open", "as": "sam" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"] [data-testid=\"private-badge\"]", "as": "sam" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"]", "count": 0, "as": "sam" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 2, "as": "sam" },
-        { "action": "open", "as": "steward" },
-        { "action": "expectCount", "selector": "[data-testid=\"med-row\"]", "count": 1, "as": "steward" },
-        { "action": "expectVisible", "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" },
-        { "action": "click", "selector": "[data-testid=\"tab-manage\"]", "as": "steward" },
-        { "action": "expectCount", "selector": "[data-testid=\"manage-row\"]", "count": 1, "as": "steward" },
-        { "action": "expectVisible", "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]", "as": "steward" }
+        {
+          "action": "open",
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"dose-pill\"][data-slot=\"08:00\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"]",
+          "count": 0,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"]",
+          "count": 2,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"steward-note\"]",
+          "count": 0,
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "pat"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectHidden",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "as": "pat"
+        },
+        {
+          "action": "click",
+          "selector": ".modal-actions .btn-ghost",
+          "as": "pat"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"] [data-testid=\"edit-med\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectHidden",
+          "selector": "[data-testid=\"private-recipients-note\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:disabled",
+          "count": 0,
+          "as": "pat"
+        },
+        {
+          "action": "select",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "value": "private",
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"private-recipients-note\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:disabled",
+          "count": 2,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:not(:disabled)",
+          "count": 1,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-buddy-member:disabled",
+          "count": 2,
+          "as": "pat"
+        },
+        {
+          "action": "select",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "value": "family",
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:disabled",
+          "count": 0,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:checked",
+          "count": 2,
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-buddy-member:checked",
+          "count": 1,
+          "as": "pat"
+        },
+        {
+          "action": "select",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "value": "private",
+          "as": "pat"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member:checked",
+          "count": 0,
+          "as": "pat"
+        },
+        {
+          "action": "click",
+          "selector": ".modal-actions [data-action=\"save-med\"]",
+          "as": "pat"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"][data-visibility=\"private\"] [data-testid=\"private-badge\"]",
+          "as": "pat"
+        },
+        {
+          "action": "open",
+          "as": "sam"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam-own\"] [data-testid=\"private-badge\"]",
+          "as": "sam"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-pat\"]",
+          "count": 0,
+          "as": "sam"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"]",
+          "count": 2,
+          "as": "sam"
+        },
+        {
+          "action": "open",
+          "as": "steward"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"]",
+          "count": 1,
+          "as": "steward"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]",
+          "as": "steward"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "steward"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"manage-row\"]",
+          "count": 1,
+          "as": "steward"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"sp-sam\"] [data-testid=\"edit-med\"]",
+          "as": "steward"
+        }
+      ]
+    },
+    {
+      "name": "an adult sees a refill that is near, records it and the date moves on by the interval; a far-off refill is said on Manage only; a child gets no Refilled button; an archived medication's editor offers no refill date",
+      "members": {
+        "parent": "adult",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, created_at, refill_on, refill_every_days) VALUES ('ui-refill', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:00Z', date('now', '+2 days'), 30), ('ui-later', ?, ?, ?, ?, 0, 0, '2026-01-01T00:00:01Z', date('now', '+40 days'), NULL), ('ui-arch', ?, ?, ?, ?, 0, 1, '2026-01-01T00:00:02Z', NULL, NULL)",
+          "params": [
+            "{{kid}}",
+            "Inhaler",
+            "2 puffs",
+            "[\"08:00\"]",
+            "{{parent}}",
+            "Vitamin D",
+            "2000 IU",
+            "[\"08:00\"]",
+            "{{parent}}",
+            "Old antibiotic",
+            "500mg",
+            "[\"08:00\"]"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-refill\"] [data-testid=\"refill-line\"][data-refill=\"soon\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-later\"] [data-testid=\"refill-line\"]",
+          "count": 0,
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-later\"] [data-testid=\"refill-line\"][data-refill=\"later\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-later\"] [data-testid=\"refilled\"]",
+          "count": 1,
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-refill\"] [data-testid=\"refilled\"]",
+          "as": "parent"
+        },
+        {
+          "action": "dialog",
+          "answer": "accept",
+          "text": "Refilled",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-refill\"] [data-testid=\"refill-line\"][data-refill=\"later\"]",
+          "as": "parent"
+        },
+        {
+          "action": "reload",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-refill\"] [data-testid=\"refill-line\"]",
+          "count": 0,
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-refill\"] [data-testid=\"refill-line\"][data-refill=\"later\"]",
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": ".show-archived-toggle input",
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"manage-row\"][data-med-id=\"ui-arch\"] [data-testid=\"edit-med\"]",
+          "as": "parent"
+        },
+        {
+          "action": "expectCount",
+          "selector": "#f-refill-on:disabled",
+          "count": 1,
+          "as": "parent"
+        },
+        {
+          "action": "click",
+          "selector": ".modal-actions .btn-ghost",
+          "as": "parent"
+        },
+        {
+          "action": "open",
+          "as": "kid"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-refill\"]",
+          "as": "kid"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"refilled\"]",
+          "count": 0,
+          "as": "kid"
+        }
       ]
     }
   ]

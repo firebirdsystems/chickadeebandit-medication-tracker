@@ -28,6 +28,70 @@ describe("printed lists", () => {
   });
 });
 
+describe("refills", () => {
+  const dr = manifest.date_reminders;
+
+  it("emails ahead of the refill date, to the adults who may read the medication and the person it is for", () => {
+    // The row policy shares a "family" medication with adults only; the
+    // reminder must not widen that to a child with an email address.
+    expect(dr).toMatchObject({
+      table: "medications", date_column: "refill_on", title_column: "name", owner_column: "member_id",
+      visibility_column: "visibility", everyone_values: ["family"], household_audience: "adults",
+      last_reminded_column: "refill_reminded_at", on_no_recipients: "skip",
+    });
+    expect(manifest.row_policies.medications).toMatchObject({ visibility_column: "visibility", adult_values: ["family"] });
+    expect(manifest.db_plaintext_columns).toContain("refill_on");
+    expect(manifest.required_capabilities).toEqual(expect.arrayContaining(["cron", "email"]));
+    // "skip", never "adults": the fallback would email a PRIVATE medication's
+    // name to the other adults when its owner has no email address. A shared
+    // row already reaches the adults, so the fallback buys nothing.
+    expect(dr.on_no_recipients).toBe("skip");
+    // Adults may clear the stamp (a new date is a new occurrence); the hub writes it.
+    expect(manifest.row_policies.medications.column_write_acls.refill_reminded_at).toEqual({ writable_by: ["adult"] });
+  });
+
+  it("drops the reminder stamp when the refill date moves, and only then", () => {
+    expect(source).toContain("SET refill_on = ?, refill_reminded_at = NULL\n        WHERE id = ? AND refill_on = ?");
+    expect(source).toContain('${refillDateChanged ? ", refill_reminded_at=NULL" : ""}');
+    expect(source).toContain('const refillDateChanged = String(before?.refill_on ?? "") !== refillOn;');
+  });
+
+  it("guards a save on the archive state the form was opened against", () => {
+    // `isArchived` is the page's state. Without the guard a form opened before
+    // someone else archived the medication writes reminders and a refill date
+    // back onto the archived row, which the reminder lanes do not exclude.
+    expect(source).toContain("WHERE id=? AND archived=?`");
+    expect(source).toContain("existingId, isArchived ? 1 : 0]");
+    expect(source).toContain('const found = await medicationFoundAs(existingId, isArchived);');
+  });
+
+  it("never keeps a refill date on an archived medication, whatever the editor says", () => {
+    expect(source).toContain('const refillOn   = isArchived ? "" : (document.getElementById("f-refill-on")?.value ?? "");');
+    expect(source).toContain('aria-label="Next refill due" ${med.archived ? "disabled" : ""}');
+  });
+
+  it("calls a refill soon on the same day the email goes out", () => {
+    expect(source).toContain("REFILL_SOON_DAYS");
+    expect(dr.default_lead_days).toBe(5);
+    // logic.js REFILL_SOON_DAYS is pinned to the same number in logic.test.mjs.
+  });
+
+  it("records a refill with a write guarded on the date it was refilled from", () => {
+    expect(source).toContain("SET refill_on = ?, refill_reminded_at = NULL\n        WHERE id = ? AND refill_on = ?");
+    expect(source).toContain('failureLine(null, { action: "record the refill", thing: "medication", found, guarded: true })');
+  });
+
+  it("drops the refill date when a medication is archived, so nobody is emailed to refill it", () => {
+    expect(source).toContain(`SET archived = ?, reminders_on = 0\${archive ? ", refill_on = ''" : ""}`);
+  });
+
+  it("prints the prescriber, pharmacy and next refill on the medication list", () => {
+    const view = manifest.reports.views.find((v) => v.id === "current_medications");
+    expect(view.columns.map((c) => c.key)).toEqual(expect.arrayContaining(["prescriber", "pharmacy", "refill"]));
+    expect(view.source.query).toContain("m.refill_on AS refill");
+  });
+});
+
 describe("medication UI safety contract", () => {
   it("loads and surfaces the hub's monitored-reminder status", () => {
     expect(source).toContain('const REMINDER_STATUS = "api/reminders-schedule-status"');
@@ -119,9 +183,9 @@ describe("medication UI safety contract", () => {
     // The hub guards the column to its adult owner; naming it in anyone
     // else's statement would change no row or refuse the insert.
     expect(manifest.row_policies.medications.column_write_acls.visibility).toEqual({ writable_by: ["adult_owner"] });
-    expect(source).toContain('remind_member_ids=?, buddy_member_ids=?${choosesVisibility ? ", visibility=?" : ""}');
+    expect(source).toContain('${refillDateChanged ? ", refill_reminded_at=NULL" : ""}${choosesVisibility ? ", visibility=?" : ""}');
     expect(source).toContain('${choosesVisibility ? "visibility, " : ""}archived, created_at)');
-    expect(source).not.toMatch(/buddy_member_ids=\?, visibility=\?/);
+    expect(source).not.toMatch(/refill_every_days=\?, visibility=\?/);
   });
 
   it("exposes recurrence, course dates, recipients, and escalation controls", () => {

@@ -14,6 +14,7 @@ import {
   withArchivedState, searchableFields,
   isDueOn, showsToday,
   daysBefore, reportRange, reportUrl,
+  isIsoDate, nextRefillOn, refillStatus, refillLine, REFILL_SOON_DAYS,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -387,6 +388,78 @@ describe("searchableFields", () => {
     const fields = searchableFields({ name: "Amoxicillin", dosage: "5mg", notes: "with food" });
     expect(fields).toContain("5mg");
     expect(fields).toContain("with food");
+  });
+
+  it("matches on the prescriber and the pharmacy", () => {
+    const fields = searchableFields({ name: "Amoxicillin", prescriber: "Dr. Rivera", pharmacy: "Main St" });
+    expect(fields).toContain("Dr. Rivera");
+    expect(fields).toContain("Main St");
+  });
+});
+
+// ── refills ──────────────────────────────────────────────────────────────────
+describe("isIsoDate", () => {
+  it("accepts a real yyyy-mm-dd and nothing else", () => {
+    expect(isIsoDate("2026-02-28")).toBe(true);
+    expect(isIsoDate("2028-02-29")).toBe(true);
+    expect(isIsoDate("2026-02-30")).toBe(false);
+    expect(isIsoDate("2026-13-01")).toBe(false);
+    expect(isIsoDate("2026-2-8")).toBe(false);
+    expect(isIsoDate("")).toBe(false);
+    expect(isIsoDate(null)).toBe(false);
+    expect(isIsoDate("2026-02-28T00:00:00Z")).toBe(false);
+  });
+});
+
+describe("nextRefillOn", () => {
+  it("counts the interval on from the household's day, across a month end", () => {
+    expect(nextRefillOn("2026-01-15", 30)).toBe("2026-02-14");
+    expect(nextRefillOn("2026-02-27", 3)).toBe("2026-03-02");
+    expect(nextRefillOn("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("is nothing without an interval to count or a day to count from", () => {
+    expect(nextRefillOn("2026-01-15", null)).toBe("");
+    expect(nextRefillOn("2026-01-15", 0)).toBe("");
+    expect(nextRefillOn("2026-01-15", 367)).toBe("");
+    expect(nextRefillOn("2026-01-15", 2.5)).toBe("");
+    expect(nextRefillOn("2026-01-15", "30")).toBe("2026-02-14");
+    expect(nextRefillOn("", 30)).toBe("");
+  });
+});
+
+describe("refillStatus", () => {
+  it("is null when no refill is tracked", () => {
+    expect(refillStatus({ refill_on: "" }, "2026-03-01")).toBeNull();
+    expect(refillStatus({ refill_on: null }, "2026-03-01")).toBeNull();
+    expect(refillStatus({}, "2026-03-01")).toBeNull();
+    expect(refillStatus({ refill_on: "soon" }, "2026-03-01")).toBeNull();
+    expect(refillStatus({ refill_on: "2026-03-05" }, "")).toBeNull();
+  });
+
+  it("counts the days to the date, negative once it is overdue", () => {
+    expect(refillStatus({ refill_on: "2026-03-05" }, "2026-03-01")).toEqual({ on: "2026-03-05", daysUntil: 4, overdue: false, soon: true });
+    expect(refillStatus({ refill_on: "2026-03-01" }, "2026-03-01")).toEqual({ on: "2026-03-01", daysUntil: 0, overdue: false, soon: true });
+    expect(refillStatus({ refill_on: "2026-02-27" }, "2026-03-01")).toEqual({ on: "2026-02-27", daysUntil: -2, overdue: true, soon: false });
+    expect(refillStatus({ refill_on: "2026-04-01" }, "2026-03-01")).toEqual({ on: "2026-04-01", daysUntil: 31, overdue: false, soon: false });
+  });
+
+  it("calls a refill soon up to the lead days the manifest emails at, and not past them", () => {
+    const today = "2026-03-01";
+    expect(refillStatus({ refill_on: daysBefore(today, -REFILL_SOON_DAYS) }, today).soon).toBe(true);
+    expect(refillStatus({ refill_on: daysBefore(today, -(REFILL_SOON_DAYS + 1)) }, today).soon).toBe(false);
+  });
+});
+
+describe("refillLine", () => {
+  it("says today, overdue, due in, or the date, with the day word agreeing in number", () => {
+    expect(refillLine(null)).toBe("");
+    expect(refillLine(refillStatus({ refill_on: "2026-03-01" }, "2026-03-01"))).toBe("Refill due today");
+    expect(refillLine(refillStatus({ refill_on: "2026-03-02" }, "2026-03-01"))).toBe("Refill due in 1 day");
+    expect(refillLine(refillStatus({ refill_on: "2026-03-04" }, "2026-03-01"))).toBe("Refill due in 3 days");
+    expect(refillLine(refillStatus({ refill_on: "2026-02-28" }, "2026-03-01"))).toBe("Refill overdue by 1 day");
+    expect(refillLine(refillStatus({ refill_on: "2026-02-20" }, "2026-03-01"))).toBe("Refill overdue by 9 days");
+    expect(refillLine(refillStatus({ refill_on: "2026-04-01" }, "2026-03-01"))).toBe("Refill due 2026-04-01");
   });
 });
 
