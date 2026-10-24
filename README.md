@@ -16,7 +16,8 @@ Track daily medications for every family member. Check off doses as they're take
   At home or in a general space any adult can change who sees a medication they can see, another
   adult's shared one included (the hub allows it); the page offers the choice only on your own
   medications, and on a child's or guest's. In a co-parenting space the hub keeps each parent's
-  own medications theirs: a parent changes, removes or re-shares only their own and the children's.
+  own medications theirs: a parent ticks, changes, removes or re-shares only their own and the
+  children's, and nobody else (the care team included) ticks a parent's own medication there.
 - A household can name a **care team**: a member group (a nanny who signs in as a guest, a
   grandparent) that sees every medication marked "Adults and the care team" and ticks its doses.
   A guest or a child on the care team sees nothing else; an adult on it keeps everything the adults
