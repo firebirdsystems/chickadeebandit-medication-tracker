@@ -174,9 +174,16 @@ export function parseJsonArray(value) {
 
 const isAdultMember = m => !!m && (m.role === "adult" || m.role === "admin");
 
-/** The two values of a medication's `visibility` column. */
+/** The three values of a medication's `visibility` column. */
 export const VISIBILITY_FAMILY = "family";
 export const VISIBILITY_PRIVATE = "private";
+export const VISIBILITY_CARE = "care";
+
+/** A medication the care team sees as well as the adults: the household's
+ * chosen member group (a nanny who signs in as a guest, a grandparent). */
+export function isCareMedication(med) {
+  return med?.visibility === VISIBILITY_CARE;
+}
 
 /** A medication kept to the person it is for. Rows written before the column
  * existed carry no value and were always shared, so only an explicit
@@ -201,16 +208,22 @@ export function managesMedications(member, { tenantKind = "household", spaceKind
 }
 
 /**
- * Whether the member may choose who a medication is for. The hub keeps the
- * owner an adult names only where supervision is theirs (supervisor_assigns_owner):
- * every adult at home, the steward of a general or roster space. Everywhere
- * else it stamps the row to its author, so the form offers no choice rather
- * than one the hub would silently overrule.
+ * Whether the member may add a medication for `owner` (someone other than
+ * themselves). The hub keeps the owner an adult names only where supervision
+ * is theirs (supervisor_assigns_owner): every adult at home, the steward of a
+ * general or roster space, for anyone. In a co-parenting space it keeps it
+ * only for a CHILD member (coparenting_child_supervision), so a steward adds a
+ * child's medication but never one for the other parent; with no owner given
+ * there it answers false. Everywhere else the hub stamps the row to its
+ * author, so the form offers no choice rather than one the hub would silently
+ * overrule.
  */
-export function canAssignOwner(member, { tenantKind = "household", spaceKind = null, isAdmin = false } = {}) {
+export function canAssignOwner(member, { tenantKind = "household", spaceKind = null, isAdmin = false } = {}, owner = null) {
   if (!isAdultMember(member)) return false;
   if (tenantKind === "household") return true;
-  return isAdmin === true && spaceKind !== "coparenting";
+  if (isAdmin !== true) return false;
+  if (spaceKind !== "coparenting") return true;
+  return owner?.role === "child";
 }
 
 /** Whether a member may add a medication at all: whoever manages them. */
@@ -218,24 +231,54 @@ export function canAddMedication(member, tenant = {}) {
   return managesMedications(member, tenant);
 }
 
-/** Only the person a medication is for decides who else sees it, and only as
- * an adult: a child's medication stays in their parents' sight. A medication
- * added for someone else is shared with every adult, which is what makes it
- * manageable by the people who added it. Mirrors the hub's rule for the
- * `visibility` column (column_write_acls, writable_by ["adult_owner"]). */
-export function canChooseVisibility(ownerId, me) {
-  return isAdultMember(me) && !!ownerId && ownerId === me.id;
+/** Who decides who else sees a medication: an adult, for their own and for a
+ * child's or a guest's (the people they look after). Another adult's
+ * medication is left to that adult, as its editing is (canEditMedication),
+ * though at home the hub lets any adult who sees a row write the column
+ * (column_write_acls, writable_by ["adult"], write_visibility_scoped). In a
+ * co-parenting space the hub writes only the caller's own and a child's
+ * medications (coparenting_child_supervision), so a guest's is not offered
+ * there. A child never chooses. */
+export function canChooseVisibility(ownerId, me, members = [], tenant = {}) {
+  if (!isAdultMember(me) || !ownerId) return false;
+  if (ownerId === me.id) return true;
+  const owner = (members ?? []).find(m => m?.id === ownerId);
+  if (isCoparentingSpace(tenant)) return owner?.role === "child";
+  return !!owner && !isAdultMember(owner);
+}
+
+/** A co-parenting space, where the hub keeps each parent's own medications
+ * theirs: writes reach the caller's own and the children's only. */
+function isCoparentingSpace(tenant) {
+  return (tenant?.tenantKind ?? "household") !== "household" && tenant?.spaceKind === "coparenting";
 }
 
 /**
- * Returns true if the current user can see a medication: their own always,
- * and every shared one when they manage medications. A private medication is
- * its owner's alone.
+ * The choices the form offers for a medication's visibility, in order. "Only
+ * me" is offered on the chooser's own medication alone: a child's medication
+ * stays in their parents' sight. "Care team" is offered once an admin has
+ * chosen the group; without one the form says so rather than offering a value
+ * nobody could read. A stored value the form no longer offers (a care
+ * medication after the group is unset) stays offered so an edit keeps it.
+ */
+export function visibilityOptions(ownerId, me, { careTeamConfigured = false, current = VISIBILITY_FAMILY } = {}) {
+  const options = [VISIBILITY_FAMILY];
+  if (careTeamConfigured || current === VISIBILITY_CARE) options.push(VISIBILITY_CARE);
+  if (ownerId && me && ownerId === me.id) options.push(VISIBILITY_PRIVATE);
+  return options;
+}
+
+/**
+ * Returns true if whoever manages medications can see this one: their own
+ * always, every other one that is not private. Used to gate editing
+ * (canEditMedication); what the page lists is the hub's select. A private
+ * medication is its owner's alone.
  */
 export function canViewMedication(med, me, members, tenant) {
   if (!me) return false;
   if (med.member_id === me.id) return true;
-  return managesMedications(me, tenant) && !isPrivateMedication(med);
+  if (managesMedications(me, tenant)) return !isPrivateMedication(med);
+  return false;
 }
 
 /**
@@ -250,14 +293,16 @@ export function canManageMedications(me, tenant) {
 /**
  * Returns true if the current user can edit a specific medication. Whoever
  * manages edits what they can see, with one courtesy at home: another adult's
- * medication is left to that adult. In a shared space every adult who sees a
+ * medication is left to that adult. In a general space every adult who sees a
  * medication keeps it, which is the point of sharing a parent's list between
- * siblings.
+ * siblings. In a co-parenting space the hub writes only your own and the
+ * children's (coparenting_child_supervision), never the other parent's.
  */
 export function canEditMedication(med, me, members, tenant) {
   if (!canManageMedications(me, tenant)) return false;
   if (!canViewMedication(med, me, members, tenant)) return false;
   if (med.member_id === me.id) return true;
+  if (isCoparentingSpace(tenant)) return members.find(m => m.id === med.member_id)?.role === "child";
   if ((tenant?.tenantKind ?? "household") !== "household") return true;
   const owner = members.find(m => m.id === med.member_id);
   return !isAdultMember(owner); // can edit children's meds, not other adults'

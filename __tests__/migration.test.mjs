@@ -151,6 +151,36 @@ describe("migration 006 reminder recipients", () => {
   });
 });
 
+describe("migration 008 care team", () => {
+  it("deletes orphaned doses and creates the settings table the care team group id lives in, keyed and empty", () => {
+    const db = database();
+    for (const name of ["001_init.sql", "002_indexes.sql", "003_schedule_reminders.sql",
+      "004_dose_dosage.sql", "005_visibility.sql", "006_reminder_recipients_default.sql",
+      "007_refills.sql"]) sql(db, migration(name));
+    sql(db, `
+      INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at)
+      VALUES ('kept', 'm1', 'Kept', '2026-01-01');
+      INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by)
+      VALUES ('kept', '2026-01-02', 'morning', '2026-01-02T08:00', 'm1'),
+             ('gone', '2026-01-02', 'morning', '2026-01-02T08:00', 'm1');
+    `);
+
+    sql(db, migration("008_care_team.sql"));
+
+    // A dose whose medication is gone is deleted, so a new medication reusing
+    // that id cannot adopt it; a dose with its medication stays.
+    expect(rows(db, `SELECT medication_id FROM app_medication_tracker__doses`)).toEqual([{ medication_id: "kept" }]);
+    expect(rows(db, `SELECT key, value FROM app_medication_tracker__settings`)).toEqual([]);
+    sql(db, `INSERT INTO app_medication_tracker__settings (key, value) VALUES ('care_team_group_id', 'g1')`);
+    expect(() => sql(db, `INSERT INTO app_medication_tracker__settings (key, value) VALUES ('care_team_group_id', 'g2')`))
+      .toThrow();
+    // Re-runnable: the hub applies each migration once, but a second run must not fail.
+    sql(db, migration("008_care_team.sql"));
+    expect(rows(db, `SELECT value FROM app_medication_tracker__settings WHERE key = 'care_team_group_id'`))
+      .toEqual([{ value: "g1" }]);
+  });
+});
+
 describe("migration 007 refills", () => {
   it("adds refill and prescriber columns that an existing row reads as untracked and blank", () => {
     const db = database();

@@ -363,8 +363,9 @@ import {
   medicationTimes, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
   formatTime, isClockTime, remindersEnabled, MAX_TIMES,
   withArchivedState,
-  canViewMedication, managesMedications, canAddMedication, canEditMedication,
+  managesMedications, canAddMedication, canEditMedication,
   canAssignOwner, canChooseVisibility, isPrivateMedication, VISIBILITY_FAMILY, VISIBILITY_PRIVATE,
+  VISIBILITY_CARE, isCareMedication, visibilityOptions,
   reminderRecipientsValue, recipientsForVisibility, canRereadNow, rereadStillCurrent,
   writeOutcomeUnknown, storedMatchesForm, failureLine,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
@@ -374,6 +375,7 @@ import {
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
+const ADMIN_CONFIG_URL = window.__ADMIN_CONFIG_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
 const REMINDER_STATUS = "api/reminders-schedule-status";
 const APP_ID  = window.__APP_ID      ?? "medication-tracker";
@@ -388,18 +390,28 @@ const TENANT = {
 // Who may manage medications (see every shared one, add, edit, archive):
 // every adult in a household or a general or co-parenting space, the steward
 // alone in a roster (a care coordinator's client list). Matches the hub
-// medications policy (owner_or_visibility, adult_values ["family"],
+// medications policy (owner_or_visibility, adult_values ["family", "care"],
 // write_visibility_scoped, adult-only column writes, steward_writes_only). A
-// medication marked private is its owner's alone. Logging a dose is never
+// medication marked private is its owner's alone. One marked "care" is also
+// read by the care team: the hub member group an admin names in this app's
+// settings (privileged_groups on care_team_group_id, select only), so a nanny
+// who signs in as a guest, or a grandparent, sees a child's medications and
+// ticks their doses without seeing the adults' own. Logging a dose is never
 // gated beyond seeing the medication — that stays every member's own.
 const amManage  = (m) => managesMedications(m, TENANT);
 const canAdd    = (m) => canAddMedication(m, TENANT);
-const canAssign = (m) => canAssignOwner(m, TENANT);
+const canAssign = (m, owner) => canAssignOwner(m, TENANT, owner);
 const IN_SPACE  = TENANT.tenantKind !== "household";
 const IN_ROSTER = IN_SPACE && TENANT.spaceKind === "roster";
 
 // ── State ──────────────────────────────────────────────────────────────────
 let members      = [];
+let groups       = []; // hub member groups (family.groups): who is on the care team
+let settings     = { care_team_group_id: null }; // app settings (app_config): admin-written
+// Whether the last reads of the groups and of the setting answered. Either one
+// failing leaves the care team unknown, never "no care team".
+let groupsRead   = false;
+let settingsRead = false;
 let medications  = []; // non-archived active meds
 let archivedMeds = []; // archived meds (loaded only in manage tab)
 let doses        = {}; // keyed by `${medId}__${date}__${slot}`
@@ -472,15 +484,73 @@ async function publishEvent(type, subjectId, payload = {}) {
 
 // ── Data loading ───────────────────────────────────────────────────────────
 async function loadMembers() {
-  if (!CONTEXT) { members = DEMO_MEMBERS; return; }
+  members = await fetchMembers();
+}
+async function fetchMembers() {
+  if (!CONTEXT) return DEMO_MEMBERS;
   // Throws when the members cannot be read, so firstLoad shows the banner
   // rather than a household with nobody to give a medication to.
+  // family.members alone: the hub answers it from the document's preload,
+  // which it does only when every key asked for was preloaded.
   const res  = await fetch(`${CONTEXT}?keys=family.members`);
   const json = await res.json().catch(() => null);
   if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error("Couldn’t reach the hub. Try again.");
   // A 200 can still name a key the hub failed to read: that is a failed read too.
   if (Array.isArray(json.$errors) && json.$errors.includes("family.members")) throw new Error("Couldn’t reach the hub. Try again.");
-  members = json["family.members"] ?? [];
+  return json["family.members"] ?? [];
+}
+
+// The member groups only name the care team (the Manage tab's button, the
+// form's hint, a row's label); what anyone sees is the hub's answer. Read on
+// their own: the hub does not preload family.groups, so asked beside the
+// members they would hold up the first paint. A failed read leaves the care
+// team unknown, not empty; while the read is out, the last good answer stands.
+async function loadGroups() {
+  try { groups = await fetchGroups(); groupsRead = true; }
+  catch (e) { groupsRead = false; throw e; }
+}
+async function fetchGroups() {
+  if (!CONTEXT) return groups;
+  const res  = await fetch(`${CONTEXT}?keys=family.groups`);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || typeof json !== "object" || json.error
+    || !Array.isArray(json["family.groups"])
+    || (Array.isArray(json.$errors) && json.$errors.includes("family.groups"))) {
+    throw new Error("Couldn’t read the member groups.");
+  }
+  return json["family.groups"];
+}
+
+// The care team group the admin chose (app_config settings, readable by every
+// member, written through the hub's admin-config endpoint alone).
+// A failed read leaves settingsRead false, and the care team unknown; while
+// the read is out, the last good answer stands.
+async function loadSettings() {
+  try { applySettings(await fetchSettings()); }
+  catch (e) { settingsRead = false; throw e; }
+}
+function applySettings(careTeamGroupId) {
+  settings = { ...settings, care_team_group_id: careTeamGroupId };
+  settingsRead = true;
+}
+async function fetchSettings() {
+  if (!DB) return null;
+  const { rows } = await db(`SELECT key, value FROM app_medication_tracker__settings WHERE key = 'care_team_group_id'`);
+  let value = null;
+  for (const r of rows) if (r.key === "care_team_group_id") value = r.value || null;
+  return value;
+}
+
+// Unknown while either read failed: shown as such, never as "no care team".
+function careTeamKnown() { return (groupsRead || !CONTEXT) && settingsRead; }
+function careTeamGroup() {
+  return careTeamKnown() ? groups.find(g => g.id === settings.care_team_group_id) ?? null : null;
+}
+function careTeamConfigured() { return !!careTeamGroup(); }
+// A "care" row's label. With no care team set (cleared, or its group deleted)
+// only the adults see it, and the label says so; unknown, it names the marking.
+function careRowLabel() {
+  return careTeamKnown() && !careTeamConfigured() ? "Care team (none set): adults only" : "Care team";
 }
 
 // After a plain `WHERE id = ?` medication write that changed nothing: whether
@@ -534,7 +604,16 @@ async function fetchMedications() {
                archived, created_at
         FROM app_medication_tracker__medications WHERE archived = 1 ORDER BY created_at ASC`),
   ]);
-  return { active: active.rows, archived: archived.rows };
+  // The one exception to listing every row the hub returned. In a roster, a
+  // participant reads their own medications only — but the hub's roster
+  // collapse of owner_or_visibility also returns the steward's own shared
+  // ("family"/"care") ones to every adult participant. The page shows a
+  // participant their own rows alone, as the roster intends. (The hub API
+  // still returns those rows; only the page stops showing them.)
+  const shown = (rows) => IN_ROSTER && !TENANT.isAdmin
+    ? rows.filter(m => m.member_id === ME?.id)
+    : rows;
+  return { active: shown(active.rows), archived: shown(archived.rows) };
 }
 
 async function loadDoses() {
@@ -588,11 +667,14 @@ function myMember() {
   return ME ? members.find(m => m.id === ME.id) ?? ME : null;
 }
 
-// The Today tab's medications: the ones this member may see that are scheduled
-// today (see logic.js showsToday). Manage lists every one regardless.
+// The Today tab's medications: the ones scheduled today (see logic.js
+// showsToday). Who sees which is the hub's select (the medications row
+// policy, the care team included), so every row it returned is shown: the
+// page's own copy of the group or the setting, failed or a minute stale, must
+// not hide one (a roster participant's rows are the one exception, kept in
+// fetchMedications). Manage lists every one regardless.
 function visibleMeds() {
-  const me = myMember();
-  return medications.filter(med => canViewMedication(med, me, members, TENANT) && showsToday(med, doses, TODAY));
+  return medications.filter(med => showsToday(med, doses, TODAY));
 }
 
 function unmonitoredIds() {
@@ -893,12 +975,16 @@ window.submitMedication = async function(existingId) {
     hubAlert("Refill every N days must be between 1 and 366.");
     return;
   }
-  // Only the person a medication is for keeps it private; one added for
-  // someone else is shared, so the adults who added it can keep it.
-  const choosesVisibility = canChooseVisibility(memberId, myMember());
-  const visibility = choosesVisibility
-    && document.getElementById("f-visibility")?.value === VISIBILITY_PRIVATE
-    ? VISIBILITY_PRIVATE : VISIBILITY_FAMILY;
+  // An adult chooses who sees their own medication and a child's or a
+  // guest's; one added for another adult is shared, so the adults who added it
+  // can keep it. What is sent is a choice the form was drawn with (its own
+  // options, from visibilityOptions): "Only me" is the owner's alone, "Care
+  // team" is offered once a group is chosen (or kept on a row that has it).
+  const choosesVisibility = canChooseVisibility(memberId, myMember(), members, TENANT);
+  const visibilitySelect = document.getElementById("f-visibility");
+  const offered = [...(visibilitySelect?.options ?? [])].map(o => o.value);
+  const chosen = visibilitySelect?.value;
+  const visibility = choosesVisibility && offered.includes(chosen) ? chosen : VISIBILITY_FAMILY;
   // A private medication reaches its owner alone, whatever the boxes say.
   const checked = cssClass => recipientsForVisibility(
     [...document.querySelectorAll(`.${cssClass}:checked`)].map(el => el.value), visibility, memberId);
@@ -933,8 +1019,9 @@ window.submitMedication = async function(existingId) {
       // stamp, so an unrelated edit cannot cause a second email.
       const before = [...medications, ...archivedMeds].find(m => m.id === existingId);
       const refillDateChanged = String(before?.refill_on ?? "") !== refillOn;
-      // `visibility` is its owner's column alone (writable_by ["adult_owner"]):
-      // naming it in anyone else's UPDATE would make the hub change no row.
+      // `visibility` is named only where the form offered the choice
+      // (canChooseVisibility): the hub takes it from any adult who sees the
+      // row, and the page leaves another adult's to that adult.
       const { changed } = await db(
         `UPDATE app_medication_tracker__medications
             SET name=?, dosage=?, notes=?, reminder_times=?, reminders_on=?,
@@ -963,8 +1050,8 @@ window.submitMedication = async function(existingId) {
         return;
       }
     } else {
-      // One added for someone else leaves `visibility` to the column default
-      // ("family"): the hub accepts the column only on the author's own row.
+      // One added for another adult leaves `visibility` to the column default
+      // ("family"); for oneself or a child the form's choice is sent.
       const { changed } = await db(
         `INSERT INTO app_medication_tracker__medications
            (id, member_id, name, dosage, notes, reminder_times, reminders_on,
@@ -1184,24 +1271,59 @@ function openModal(html) {
 function closeModal() { modalEl?.remove(); modalEl = null; settleOwedRefresh(); }
 window.closeModal = closeModal;
 
-// Who else sees the medication. Offered only while it is for the person
-// filling in the form (canChooseVisibility); hidden, it saves as shared.
-function visibilityGroupHtml(ownerId, me, current = VISIBILITY_FAMILY) {
-  const shown = canChooseVisibility(ownerId, me);
+// Who else sees the medication. Offered while it is for the person filling
+// in the form or for a child or guest (canChooseVisibility); hidden, it saves as shared.
+// The choices follow the owner (visibilityOptions): "Only me" on one's own,
+// "Care team" once an admin has chosen the group.
+function visibilityOptionsHtml(ownerId, me, current = VISIBILITY_FAMILY) {
   const others = IN_SPACE ? "Every adult in this space" : "Every adult at home";
+  const label = { [VISIBILITY_FAMILY]: others, [VISIBILITY_CARE]: "Adults and the care team", [VISIBILITY_PRIVATE]: "Only me" };
+  // In a roster the care team never sees a medication (the hub's roster
+  // collapse, and the page's own filter), so it is not offered there; a row
+  // that already says "care" keeps it.
+  const offered = visibilityOptions(ownerId, me, { careTeamConfigured: !IN_ROSTER && careTeamConfigured(), current });
+  const selected = offered.includes(current) ? current : VISIBILITY_FAMILY;
+  return offered.map(value =>
+    `<option value="${value}" ${value === selected ? "selected" : ""}>${label[value]}</option>`).join("");
+}
+
+// Whether this admin has the Manage tab's Care team button (renderManage).
+// Not in a roster, where the care team never sees anything.
+function careTeamSettable() { return TENANT.isAdmin && !!DB && !!ADMIN_CONFIG_URL && !IN_ROSTER; }
+
+function careTeamHintHtml() {
+  if (IN_ROSTER) return "";
+  if (!careTeamKnown()) return "Couldn’t check the care team. Reload to try again.";
+  if (careTeamConfigured()) {
+    return `The care team is <strong>${esc(careTeamGroup().name)}</strong>: its members see a medication marked for them and tick its doses.`;
+  }
+  if (TENANT.isAdmin) {
+    return careTeamSettable()
+      ? `No care team yet. Choose a member group under <strong>Care team</strong> on the Manage tab to share a medication with a nanny or a grandparent.`
+      : "No care team yet.";
+  }
+  return `A medication can also be shared with a care team (a nanny, a grandparent) once an admin chooses that group under <strong>Care team</strong> on the Manage tab.`;
+}
+
+function visibilityGroupHtml(ownerId, me, current = VISIBILITY_FAMILY) {
+  const shown = canChooseVisibility(ownerId, me, members, TENANT);
   return `
     <div class="form-group" id="f-visibility-group" ${shown ? "" : "hidden"}>
       <label>Who can see it</label>
       <select id="f-visibility" data-testid="f-visibility" onchange="syncPrivateRecipients()">
-        <option value="${VISIBILITY_FAMILY}" ${current === VISIBILITY_PRIVATE ? "" : "selected"}>${others}</option>
-        <option value="${VISIBILITY_PRIVATE}" ${current === VISIBILITY_PRIVATE ? "selected" : ""}>Only me</option>
+        ${visibilityOptionsHtml(ownerId, me, current)}
       </select>
+      ${IN_ROSTER ? "" : `<div data-testid="care-team-hint" style="font-size:.78rem;color:var(--muted);margin-top:4px">${careTeamHintHtml()}</div>`}
     </div>`;
 }
 
 window.ownerChanged = function(ownerId) {
   const group = document.getElementById("f-visibility-group");
-  if (group) group.hidden = !canChooseVisibility(ownerId, myMember());
+  if (group) group.hidden = !canChooseVisibility(ownerId, myMember(), members, TENANT);
+  // "Only me" is offered on one's own medication alone: the choices follow
+  // the owner, keeping what was chosen where it is still offered.
+  const select = document.getElementById("f-visibility");
+  if (select) select.innerHTML = visibilityOptionsHtml(ownerId, myMember(), select.value);
   syncPrivateRecipients();
 };
 
@@ -1210,7 +1332,7 @@ window.ownerChanged = function(ownerId) {
 // rather than saving a list that would quietly reach no one.
 function syncPrivateRecipients() {
   const ownerId = document.getElementById("f-member")?.value ?? "";
-  const isPrivate = canChooseVisibility(ownerId, myMember())
+  const isPrivate = canChooseVisibility(ownerId, myMember(), members, TENANT)
     && document.getElementById("f-visibility")?.value === VISIBILITY_PRIVATE;
   for (const box of document.querySelectorAll(".f-remind-member, .f-buddy-member")) {
     const unreachable = isPrivate && box.value !== ownerId;
@@ -1234,9 +1356,11 @@ window.openAddModal = function() {
   const me = myMember();
   if (!canAdd(me)) return;
   // The hub keeps the owner the form names only where this member supervises
-  // (canAssignOwner); elsewhere it stamps the row to its author, so the form
-  // offers no one else.
-  const adultMembers = canAssign(me) ? members : [me].filter(Boolean);
+  // (canAssignOwner): anyone at home or for a general or roster steward, the
+  // children alone in a co-parenting space (never the other parent); elsewhere
+  // it stamps the row to its author, so the form offers no one else.
+  const assignable = members.filter(m => m.id === me?.id || canAssign(me, m));
+  const adultMembers = !me || assignable.some(m => m.id === me.id) ? assignable : [me, ...assignable];
 
   const memberOptions = adultMembers
     .map(m => `<option value="${esc(m.id)}" ${m.id === me?.id ? "selected" : ""}>${esc(m.name)}</option>`)
@@ -1328,6 +1452,106 @@ window.openEditModal = function(id) {
   document.getElementById("f-name")?.focus();
 };
 
+// ── Care team setting ──────────────────────────────────────────────────────
+// Which hub member group is the care team. Saved through the hub's
+// admin-config endpoint (manifest admin_config), which only an admin may call;
+// the page offers the control to an admin alone. Members are put in the
+// group in the hub's member settings.
+// Opening the Care team settings always reads the groups and the setting
+// afresh: a group created in another hub tab, or another admin's choice, must
+// be in the select before anyone saves over it. The modal says it is checking
+// meanwhile, and the form is drawn only while that modal is still the open one.
+window.openCareTeamModal = async function() {
+  if (!TENANT.isAdmin) return;
+  openModal(`
+    <h3>Care team</h3>
+    <p data-testid="care-team-checking" style="font-size:.82rem;color:var(--muted)">Checking the care team…</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `);
+  const asked = modalEl;
+  await Promise.allSettled([loadGroups(), loadSettings()]);
+  render();
+  if (!asked || modalEl !== asked) return;
+  drawCareTeamModal();
+};
+
+function drawCareTeamModal() {
+  // Unread groups or setting are said, with a retry: a select drawn from them
+  // would read "No care team" and save over the real one.
+  if (!careTeamKnown()) {
+    openModal(`
+      <h3>Care team</h3>
+      <div class="load-error" data-testid="care-team-unknown" role="alert"><span>Couldn’t check the care team.</span>
+        <button type="button" class="load-error-retry" data-testid="care-team-retry" onclick="retryCareTeam()">Try again</button></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      </div>
+    `);
+    return;
+  }
+  const current = settings.care_team_group_id ?? "";
+  const options = groups.map(g =>
+    `<option value="${esc(g.id)}" ${g.id === current ? "selected" : ""}>${esc(g.name)}</option>`).join("");
+  openModal(`
+    <h3>Care team</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+      Members of this group see every medication marked <strong>Adults and the care team</strong> and
+      tick its doses. A guest or a child in it sees nothing else; an adult in it already sees every
+      medication the adults share. No one but its owner sees a private one. A guest reaches this app
+      only if it is granted to them (ticked in their guest invite).
+    </p>
+    <div class="form-group">
+      <label>Group</label>
+      <select id="f-care-team-group" data-testid="f-care-team-group">
+        <option value="" ${current ? "" : "selected"}>— No care team —</option>
+        ${options}
+      </select>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        ${groups.length ? "Who is in a group is set in the hub's member settings." : "There are no member groups yet. Create one in the hub's member settings first."}
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" data-testid="save-care-team" onclick="saveCareTeam()">Save</button>
+    </div>
+  `);
+}
+
+// Try again is opening it again: the same fresh reads, the same check that the
+// modal is still the open one before the form is drawn.
+window.retryCareTeam = function() { return window.openCareTeamModal(); };
+
+window.saveCareTeam = async function() {
+  const form = modalEl;
+  const value = document.getElementById("f-care-team-group")?.value ?? "";
+  const btn = form?.querySelector(".modal-actions .btn-primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const res = await fetch(ADMIN_CONFIG_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "care_team_group_id", value }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || typeof body !== "object" || body.error) {
+      throw Object.assign(new Error(body?.error || `Request failed (${res.status})`), { status: res.status });
+    }
+    // What is stored decides, not what was sent. A re-read that fails leaves
+    // the care team unknown (loadSettings), and says so.
+    const reread = await loadSettings().then(() => true, (e) => { console.error(e); return false; });
+    // Another form opened meanwhile is left alone.
+    if (modalEl === form) closeModal();
+    render();
+    if (!reread) hubAlert("Saved — couldn’t confirm the care team. Reload to check.");
+  } catch (error) {
+    console.error(error);
+    if (btn) { btn.disabled = false; btn.textContent = "Save"; }
+    hubAlert(failureLine(error, { action: "save the care team", thing: "setting" }));
+  }
+};
+
 // ── Rendering ──────────────────────────────────────────────────────────────
 function avatarHtml(member, size = 34) {
   const color = memberColor(member?.id ?? "", members);
@@ -1357,10 +1581,10 @@ function medRowHtml(med, showEditBtn = false) {
     : "";
   const notMonitored = remindersEnabled(med) && unmonitoredIds().has(String(med.id));
   return `
-    <div class="med-row${med.archived ? " archived-row" : ""}" data-testid="med-row" data-med-id="${esc(med.id)}" data-done="${done ? "yes" : "no"}" data-visibility="${isPrivateMedication(med) ? VISIBILITY_PRIVATE : VISIBILITY_FAMILY}">
+    <div class="med-row${med.archived ? " archived-row" : ""}" data-testid="med-row" data-med-id="${esc(med.id)}" data-done="${done ? "yes" : "no"}" data-visibility="${isPrivateMedication(med) ? VISIBILITY_PRIVATE : isCareMedication(med) ? VISIBILITY_CARE : VISIBILITY_FAMILY}">
       <div class="med-row-top">
         <div>
-          <div class="med-name">${esc(med.name)}${isPrivateMedication(med) ? ` <span class="archived-badge" data-testid="private-badge">Only you</span>` : ""}</div>
+          <div class="med-name">${esc(med.name)}${isPrivateMedication(med) ? ` <span class="archived-badge" data-testid="private-badge">Only you</span>` : isCareMedication(med) ? ` <span class="archived-badge" data-testid="care-badge">${careRowLabel()}</span>` : ""}</div>
           ${med.dosage ? `<div class="med-dosage">${esc(med.dosage)}</div>` : ""}
           ${med.notes ? `<div class="med-notes">${esc(med.notes)}</div>` : ""}
           ${notMonitored ? `<div class="med-notes"><strong>Reminder not monitored — turn another reminder off or upgrade.</strong></div>` : ""}
@@ -1431,6 +1655,16 @@ function renderToday(me, visible) {
     // Other adults' medications (whoever manages sees everyone's)
     const otherAdults = others.filter(m => isAdult(m)).map(sectionFor).join("");
     if (otherAdults) html += `<p class="section-title">Other Adults</p>${otherAdults}`;
+  } else {
+    // Anyone else's medication the hub returned to a non-manager is one marked
+    // for the care team, by the person it is for. Ticking is offered as on
+    // one's own; editing is the adults'.
+    const cared = [...byMember.entries()].filter(([ownerId]) => ownerId !== me?.id);
+    if (cared.length) {
+      html += `<p class="section-title" data-testid="care-team-title">Care team</p>`;
+      html += cared.map(([ownerId, meds]) =>
+        memberSectionHtml(members.find(m => m.id === ownerId), meds, members.find(m => m.id === ownerId)?.name ?? "Unknown", false)).join("");
+    }
   }
 
   return html + participantFooterHtml(me);
@@ -1442,8 +1676,8 @@ function renderManage(me) {
   }
 
   const allVisible = [
-    ...medications.filter(med => canViewMedication(med, me, members, TENANT)),
-    ...(showArchived ? archivedMeds.filter(med => canViewMedication(med, me, members, TENANT)) : []),
+    ...medications,
+    ...(showArchived ? archivedMeds : []),
   ];
 
   const shown = searchQ
@@ -1455,7 +1689,7 @@ function renderManage(me) {
     const canEdit = canEditMedication(med, me, members, TENANT);
     const slotLabels = medicationTimes(med).map(formatTime).join(", ");
     const remindersOff = !remindersEnabled(med) ? " · <em>reminders off</em>" : "";
-    const privateNote = isPrivateMedication(med) ? " · <em>only you</em>" : "";
+    const privateNote = isPrivateMedication(med) ? " · <em>only you</em>" : isCareMedication(med) ? ` · <em>${careRowLabel().toLowerCase()}</em>` : "";
     const editBtn = canEdit
       ? `<button class="btn-icon" data-testid="edit-med" data-action="edit-med" data-med-id="${esc(med.id)}" title="Edit" aria-label="Edit">${glyph("pencil")}</button>`
       : "";
@@ -1474,10 +1708,16 @@ function renderManage(me) {
   }).join("");
 
   const addBtn = `<button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Add Medication</button>`;
+  // The care team group is the admin's to choose (the hub's admin-config
+  // endpoint refuses anyone else), and the hub is where the setting lives.
+  const careTeamBtn = careTeamSettable()
+    ? `<button class="btn btn-ghost btn-sm" data-testid="care-team-settings" onclick="openCareTeamModal()">Care team${careTeamConfigured() ? `: ${esc(careTeamGroup().name)}` : ""}</button>`
+    : "";
 
   return `
     <div class="filter-bar">
       ${addBtn}
+      ${careTeamBtn}
       <label class="show-archived-toggle">
         <input type="checkbox" ${showArchived ? "checked" : ""} onchange="toggleShowArchived(this.checked)" />
         Show archived
@@ -1622,12 +1862,18 @@ document.addEventListener("click", (e) => {
 // the same load in place.
 let loadFailed = false;
 async function firstLoad() {
+  // Not awaited before the first paint (fetchGroups): the care-team labels are
+  // drawn again once the groups land, or are left unknown if they fail.
+  const groupsLoad = loadGroups().catch(e => console.error(e));
   try {
-    await Promise.all([loadMembers(), loadMedications(), loadDoses()]);
+    // The setting only names the care team: failing, it is unknown
+    // (careTeamKnown), and the medications still load.
+    await Promise.all([loadMembers(), loadMedications(), loadDoses(), loadSettings().catch(e => console.error(e))]);
     loadFailed = false;
   } catch { loadFailed = true; }
   await loadReminderStatus();
   render();
+  void groupsLoad.then(render);
 }
 void firstLoad();
 // Coming back to the tab re-reads what this member may see. Another adult may
@@ -1668,12 +1914,24 @@ async function rereadOnReturn() {
   const day = TODAY;
   // Settled separately: the medications are the read that matters here, and a
   // failed dose read must not keep a no-longer-shared one on screen.
-  const [meds, dosesForDay] = await Promise.allSettled([fetchMedications(), fetchDoses(day)]);
+  // The groups and the care-team setting are re-read only while the care team
+  // is unknown (an earlier read of that one failed). Each that answers is
+  // applied past the still-current check below, whether or not the
+  // medications answered; one that fails again leaves the care team unknown.
+  const rereadGroups = !groupsRead && !!CONTEXT;
+  const rereadSettings = !settingsRead;
+  const [meds, dosesForDay, groupsNow, settingsNow] = await Promise.allSettled([
+    fetchMedications(), fetchDoses(day),
+    rereadGroups ? fetchGroups() : null,
+    rereadSettings ? fetchSettings() : null,
+  ]);
   if (!rereadStillCurrent({ epochAtStart, writeEpoch, modalOpen: !!modalEl, writesInFlight })) {
     refreshOwed = true;
     settleOwedRefresh();
     return;
   }
+  if (rereadGroups && groupsNow.status === "fulfilled") { groups = groupsNow.value; groupsRead = true; }
+  if (rereadSettings && settingsNow.status === "fulfilled") applySettings(settingsNow.value);
   if (meds.status === "fulfilled") {
     medications  = meds.value.active;
     archivedMeds = meds.value.archived;

@@ -5,6 +5,7 @@ import {
   parseJsonArray,
   canViewMedication, canManageMedications, canEditMedication,
   managesMedications, canAddMedication, canAssignOwner, canChooseVisibility, isPrivateMedication,
+  VISIBILITY_CARE, isCareMedication, visibilityOptions,
   isDoseTaken, existingDoseKey, slotFromDoseKey, nextTodayKey,
   allDosesComplete, groupByMember,
   isClockTime, formatTime, normalizeTimes, normalizeDaysMask, normalizeMemberIds,
@@ -168,6 +169,13 @@ describe("canEditMedication", () => {
     const space = { tenantKind: "shared_space", spaceKind: "general" };
     expect(canEditMedication(med({ member_id: "adult-2" }), MEMBERS[0], MEMBERS, { ...space, isAdmin: true })).toBe(true);
     expect(canEditMedication(med({ member_id: "adult-2" }), MEMBERS[0], MEMBERS, { ...space, isAdmin: false })).toBe(true);
+  });
+
+  it("in a co-parenting space a parent edits their own and a child's, never the other parent's", () => {
+    const copar = { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true };
+    expect(canEditMedication(med({ member_id: "adult-2" }), MEMBERS[0], MEMBERS, copar)).toBe(false);
+    expect(canEditMedication(med({ member_id: "kid-1" }), MEMBERS[0], MEMBERS, copar)).toBe(true);
+    expect(canEditMedication(med({ member_id: MEMBERS[0].id }), MEMBERS[0], MEMBERS, copar)).toBe(true);
   });
 });
 
@@ -497,11 +505,23 @@ describe("canAssignOwner", () => {
     expect(canAssignOwner(child)).toBe(false);
     expect(canAssignOwner(null)).toBe(false);
   });
-  it("is the steward of a general or roster space, and nobody in a co-parenting one", () => {
+  it("is the steward of a general or roster space, for anyone", () => {
     expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: true })).toBe(true);
     expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "roster", isAdmin: true })).toBe(true);
+    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: true }, MEMBERS[1])).toBe(true);
     expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "general", isAdmin: false })).toBe(false);
-    expect(canAssignOwner(adult, { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true })).toBe(false);
+  });
+  it("in a co-parenting space is a steward for a child only, never for the other parent (coparenting_child_supervision)", () => {
+    const copar = { tenantKind: "shared_space", spaceKind: "coparenting", isAdmin: true };
+    expect(canAssignOwner(adult, copar, child)).toBe(true);
+    expect(canAssignOwner(adult, copar, MEMBERS[3])).toBe(true);
+    expect(canAssignOwner(adult, copar, MEMBERS[1])).toBe(false);
+    expect(canAssignOwner(adult, copar, { id: "admin-2", name: "Pat", role: "admin" })).toBe(false);
+    expect(canAssignOwner(adult, copar, { id: "g", name: "Aide", role: "guest" })).toBe(false);
+    expect(canAssignOwner(adult, copar)).toBe(false);
+    // Not a steward, or not an adult: still no choice.
+    expect(canAssignOwner(adult, { ...copar, isAdmin: false }, child)).toBe(false);
+    expect(canAssignOwner(child, copar, MEMBERS[3])).toBe(false);
   });
 });
 
@@ -541,8 +561,18 @@ describe("private medications", () => {
     expect(canEditMedication(med({ member_id: "adult-1", visibility: "private" }), sam, MEMBERS,
       { tenantKind: "shared_space", spaceKind: "general" })).toBe(false);
   });
-  it("is chosen only by the person the medication is for", () => {
+  it("is chosen by an adult for their own medication and for a child's, never for another adult's", () => {
     expect(canChooseVisibility("adult-1", alex)).toBe(true);
+    expect(canChooseVisibility("kid-1", alex, MEMBERS)).toBe(true);
+    expect(canChooseVisibility("adult-2", alex, MEMBERS)).toBe(false);
+    expect(canChooseVisibility("kid-1", child, MEMBERS)).toBe(false);
+    // A co-parenting space: the hub writes only own and children's rows.
+    const copar = { tenantKind: "shared_space", spaceKind: "coparenting" };
+    expect(canChooseVisibility("kid-1", alex, MEMBERS, copar)).toBe(true);
+    expect(canChooseVisibility("adult-2", alex, MEMBERS, copar)).toBe(false);
+    expect(canChooseVisibility("adult-1", alex, MEMBERS, copar)).toBe(true);
+    // An owner the page does not know is left alone.
+    expect(canChooseVisibility("nobody", alex, MEMBERS)).toBe(false);
     expect(canChooseVisibility("kid-1", alex)).toBe(false);
     expect(canChooseVisibility("adult-1", null)).toBe(false);
     expect(canChooseVisibility("", alex)).toBe(false);
@@ -705,5 +735,42 @@ describe("an add that seemed to fail", () => {
     expect(storedMatchesForm(stored, sent)).toBe(true);
     expect(storedMatchesForm(stored, { ...sent, name: "Iron tablets" })).toBe(false);
     expect(storedMatchesForm(null, sent)).toBe(false);
+  });
+});
+
+// ── care team ─────────────────────────────────────────────────────────────────
+describe("care team", () => {
+  const alex = MEMBERS[0], child = MEMBERS[2];
+  const nanny = { id: "guest-1", name: "Nan", role: "guest" };
+
+  it("marks a care medication, which the adults see as a shared one and the care team never manages", () => {
+    const care = med({ member_id: "kid-1", visibility: VISIBILITY_CARE });
+    expect(isCareMedication(care)).toBe(true);
+    expect(isCareMedication(med({ visibility: "family" }))).toBe(false);
+    // Who on the care team reads it is the hub's select (privileged_groups);
+    // the page lists what the hub returned. Adults see it as they see a
+    // shared one; the owner always.
+    expect(canViewMedication(care, alex, MEMBERS, {})).toBe(true);
+    expect(canViewMedication(care, child, MEMBERS, {})).toBe(true);
+    // The care team never manages.
+    expect(canEditMedication(care, nanny, MEMBERS, {})).toBe(false);
+    expect(canManageMedications(nanny, {})).toBe(false);
+  });
+
+  it("offers Care team only once a group is chosen, and Only me on one's own medication alone", () => {
+    expect(visibilityOptions("adult-1", alex, { careTeamConfigured: false })).toEqual(["family", "private"]);
+    expect(visibilityOptions("adult-1", alex, { careTeamConfigured: true })).toEqual(["family", "care", "private"]);
+    expect(visibilityOptions("kid-1", alex, { careTeamConfigured: true })).toEqual(["family", "care"]);
+    expect(visibilityOptions("kid-1", alex, { careTeamConfigured: false })).toEqual(["family"]);
+    // A stored care value stays offered after the group is unset, so an edit keeps it.
+    expect(visibilityOptions("kid-1", alex, { careTeamConfigured: false, current: VISIBILITY_CARE })).toEqual(["family", "care"]);
+    expect(visibilityOptions("", alex, {})).toEqual(["family"]);
+  });
+
+  it("keeps an adult on the care team as a reminder recipient: a care medication filters no recipient", () => {
+    // A guest on the care team sees and ticks the doses but is never sent a
+    // reminder or a missed-dose alert: the hub notifies no guest, and the
+    // form's Remind and Missed-dose lists leave guests out (memberChecksHtml).
+    expect(recipientsForVisibility(["adult-1", "adult-2"], VISIBILITY_CARE, "kid-1")).toEqual(["adult-1", "adult-2"]);
   });
 });

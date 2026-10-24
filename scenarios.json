@@ -328,7 +328,7 @@
       ]
     },
     {
-      "name": "in a shared space every adult sees and keeps every shared medication and ticks its doses, never reaches a private one, cannot take one over or hide one that is not theirs, and a tick is undone by its writer, the medication's owner or the steward",
+      "name": "in a shared space every adult sees and keeps every shared medication and ticks its doses, never reaches a private one (its visibility included), cannot take one over, may change who sees a shared one, and a tick is undone by its writer, the medication's owner or the steward",
       "context": "shared_space",
       "members": {
         "a": "adult",
@@ -556,22 +556,14 @@
         {
           "action": "db",
           "as": "a",
-          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-b'",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'care' WHERE id = 'm-b'",
           "expect": {
             "status": 200
           }
         },
         {
           "action": "db",
-          "as": "steward",
-          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-b'",
-          "expect": {
-            "status": 200
-          }
-        },
-        {
-          "action": "db",
-          "as": "a",
+          "as": "b",
           "sql": "SELECT id, visibility FROM app_medication_tracker__medications WHERE id = 'm-b'",
           "expect": {
             "status": 200,
@@ -579,21 +571,57 @@
             "rowsContain": [
               {
                 "id": "m-b",
-                "visibility": "family"
+                "visibility": "care"
               }
             ]
           }
         },
         {
           "action": "db",
-          "as": "steward",
-          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-planted', ?, 'Planted', 'private', '2026-01-01T00:00:03Z')",
-          "params": [
-            "{{b}}"
-          ],
+          "as": "b",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-b'",
           "expect": {
-            "status": 403,
-            "errorIncludes": "your own rows"
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-b-private'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-b-private'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT id, visibility FROM app_medication_tracker__medications WHERE id = 'm-b-private'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-b-private",
+                "visibility": "private"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT id FROM app_medication_tracker__medications WHERE id = 'm-b-private'",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
           }
         },
         {
@@ -661,7 +689,7 @@
       ]
     },
     {
-      "name": "an adult keeps a medication private: another adult sees neither it nor its doses, while a child's medication stays shared with every adult, and only the adult a medication is for changes who sees it",
+      "name": "an adult keeps a medication private: another adult sees neither it nor its doses and cannot change who sees it, a child's medication stays shared with every adult, and an adult (never a child) changes who sees a child's medication; ACCEPTED, not a regression: any adult who sees another adult's shared medication may change who sees it (here, to the care team), though the page offers that choice only on one's own and a child's",
       "members": {
         "mum": "adult",
         "dad": "adult",
@@ -780,7 +808,7 @@
           "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-kid'",
           "expect": {
             "status": 403,
-            "errorIncludes": "when an adult"
+            "errorIncludes": "may only be updated by adult members"
           }
         },
         {
@@ -848,7 +876,7 @@
         {
           "action": "db",
           "as": "dad",
-          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'private' WHERE id = 'm-kid'",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'care' WHERE id = 'm-kid'",
           "expect": {
             "status": 200
           }
@@ -862,7 +890,21 @@
             "rowCount": 1,
             "rowsContain": [
               {
-                "visibility": "family"
+                "visibility": "care"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid"
               }
             ]
           }
@@ -870,13 +912,48 @@
         {
           "action": "db",
           "as": "dad",
-          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-kid-hidden', ?, 'Hidden', 'private', '2026-01-01T00:00:02Z')",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-kid-care', ?, 'Inhaler', 'care', '2026-01-01T00:00:02Z')",
           "params": [
             "{{kid}}"
           ],
           "expect": {
-            "status": 403,
-            "errorIncludes": "your own rows"
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT visibility FROM app_medication_tracker__medications WHERE id = 'm-kid-care'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "visibility": "care"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT visibility FROM app_medication_tracker__medications WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "visibility": "private"
+              }
+            ]
           }
         },
         {
@@ -893,10 +970,542 @@
           "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
           "expect": {
             "status": 200,
-            "rowCount": 2,
+            "rowCount": 3,
             "rowsContain": [
               {
                 "id": "m-mum"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'care' WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mum",
+          "sql": "SELECT visibility FROM app_medication_tracker__medications WHERE id = 'm-mum'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "visibility": "care"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "a care team group sees a child's care medication and ticks its doses, never an adult's own; a child outside the group and a guest outside it see none of it (the hub treats a guest as a child inside a row policy)",
+      "members": {
+        "parent": "adult",
+        "nanny": "guest",
+        "kid": "child",
+        "sib": "child",
+        "visitor": "guest"
+      },
+      "granted": [
+        "nanny",
+        "visitor"
+      ],
+      "steps": [
+        {
+          "action": "seedGroup",
+          "group": "care",
+          "name": "Care team",
+          "members": [
+            "nanny"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__settings (key, value) VALUES ('care_team_group_id', ?)",
+          "params": [
+            "{{group:care}}"
+          ]
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, visibility, created_at) VALUES ('m-kid', ?, 'Amoxicillin', '5ml', '[\"08:00\",\"20:00\"]', 'care', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, reminder_times, visibility, created_at) VALUES ('m-sib', ?, 'Inhaler', '[\"08:00\"]', 'care', '2026-01-01T00:00:01Z'), ('m-parent', ?, 'Lisinopril', '[\"08:00\"]', 'family', '2026-01-01T00:00:02Z'), ('m-parent-private', ?, 'Sertraline', '[\"08:00\"]', 'private', '2026-01-01T00:00:03Z')",
+          "params": [
+            "{{sib}}",
+            "{{parent}}",
+            "{{parent}}"
+          ]
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "SELECT id FROM app_medication_tracker__medications ORDER BY id",
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              },
+              {
+                "id": "m-sib"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "SELECT id FROM app_medication_tracker__medications WHERE id IN ('m-parent', 'm-parent-private')",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by, dosage) VALUES ('m-kid', '2026-01-02', '08:00', '2026-01-02T08:05:00Z', ?, '5ml')",
+          "params": [
+            "{{nanny}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "SELECT medication_id, slot FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m-kid",
+                "slot": "08:00"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-parent', '2026-01-02', '08:00', '2026-01-02T08:05:00Z', ?)",
+          "params": [
+            "{{nanny}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "not visible"
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "UPDATE app_medication_tracker__medications SET dosage = '10ml' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "DELETE FROM app_medication_tracker__medications WHERE id = 'm-kid'",
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, visibility, created_at) VALUES ('m-nanny', ?, 'Own', 'care', '2026-01-01T00:00:04Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m-kid"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "sib",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-sib"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "visitor",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "visitor",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "visitor",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-kid', '2026-01-02', '20:00', '2026-01-02T20:05:00Z', ?)",
+          "params": [
+            "{{visitor}}"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "not visible"
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 4
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses",
+          "expect": {
+            "status": 200,
+            "rowCount": 1
+          }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "UPDATE app_medication_tracker__medications SET visibility = 'family' WHERE id = 'm-sib'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "nanny",
+          "sql": "SELECT id FROM app_medication_tracker__medications",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "in a co-parenting space either parent adds and maintains a child's medication and undoes the other's tick on it, but cannot add one for the other parent or undo a tick on the other parent's own medication; nobody re-keys a medication or rewrites who ticked a dose, and deleting a medication removes its doses",
+      "context": "shared_space.coparenting",
+      "members": {
+        "mom": "admin",
+        "dad": "admin",
+        "kid": "child"
+      },
+      "steps": [
+        {
+          "comment": "A parent adds a medication FOR the child: the child owner is kept (coparenting_child_supervision).",
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, created_at) VALUES ('m-kid', ?, 'Amoxicillin', '250mg', '2026-01-01T00:00:00Z')",
+          "params": [
+            "{{kid}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT id, member_id FROM app_medication_tracker__medications WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-kid",
+                "member_id": "scn-kid"
+              }
+            ]
+          }
+        },
+        {
+          "comment": "Naming the other parent is never kept: the row is stamped to its author.",
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, created_at) VALUES ('m-mom', ?, 'Vitamin D', '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{dad}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT id, member_id FROM app_medication_tracker__medications WHERE id = 'm-mom'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "id": "m-mom",
+                "member_id": "scn-mom"
+              }
+            ]
+          }
+        },
+        {
+          "comment": "Either parent maintains the child's medication.",
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET dosage = '500mg' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "SELECT dosage FROM app_medication_tracker__medications WHERE id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "dosage": "500mg"
+              }
+            ]
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-kid', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{mom}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES ('m-mom', '2026-01-02', '08:00', '2026-01-02T08:00:00Z', ?)",
+          "params": [
+            "{{mom}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "comment": "The other parent undoes a tick on the child's medication.",
+          "action": "db",
+          "as": "dad",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-kid' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "comment": "A tick on the other parent's own medication stays its writer's: the DELETE changes nothing.",
+          "action": "db",
+          "as": "dad",
+          "sql": "DELETE FROM app_medication_tracker__doses WHERE medication_id = 'm-mom' AND dose_date = '2026-01-02' AND slot = '08:00'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "SELECT medication_id, logged_by FROM app_medication_tracker__doses ORDER BY medication_id",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m-mom",
+                "logged_by": "scn-mom"
+              }
+            ]
+          }
+        },
+        {
+          "comment": "Nobody rewrites who ticked a dose, not even on a child's medication, where either parent may undo the tick.",
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, '08:00', ?, ?)",
+          "params": [
+            "m-kid",
+            "2026-01-03",
+            "2026-01-03T08:00:00Z",
+            "{{mom}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__doses SET logged_by = ? WHERE medication_id = 'm-kid' AND dose_date = '2026-01-03'",
+          "params": [
+            "{{dad}}"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "SELECT logged_by FROM app_medication_tracker__doses WHERE medication_id = 'm-kid' AND dose_date = '2026-01-03'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "logged_by": "scn-mom"
+              }
+            ]
+          }
+        },
+        {
+          "comment": "Nobody re-keys a medication: swapping ids would move the other parent's doses under the child's medication.",
+          "action": "db",
+          "as": "dad",
+          "sql": "UPDATE app_medication_tracker__medications SET id = 'm-swap' WHERE id = 'm-kid'",
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "UPDATE app_medication_tracker__medications SET id = 'm-swap' WHERE id = 'm-mom'",
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "comment": "Deleting a medication takes its doses, so its id can never be re-inserted under a child to adopt them.",
+          "action": "db",
+          "as": "mom",
+          "sql": "INSERT INTO app_medication_tracker__doses (medication_id, dose_date, slot, taken_at, logged_by) VALUES (?, ?, '08:00', ?, ?)",
+          "params": [
+            "m-mom",
+            "2026-01-04",
+            "2026-01-04T08:00:00Z",
+            "{{mom}}"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "DELETE FROM app_medication_tracker__medications WHERE id = 'm-mom'",
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "SELECT id FROM app_medication_tracker__medications WHERE id IN ('m-mom', 'm-swap')",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "action": "db",
+          "as": "mom",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses WHERE medication_id = 'm-mom'",
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
+        },
+        {
+          "comment": "The child's medication keeps its doses.",
+          "action": "db",
+          "as": "dad",
+          "sql": "SELECT medication_id FROM app_medication_tracker__doses WHERE medication_id = 'm-kid'",
+          "expect": {
+            "status": 200,
+            "rowCount": 1,
+            "rowsContain": [
+              {
+                "medication_id": "m-kid"
               }
             ]
           }

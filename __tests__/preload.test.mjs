@@ -23,6 +23,15 @@ describe("manifest.preload mirrors the app's first-render reads", () => {
     }
   });
 
+  it("answers the care-team setting read loadSettings posts", () => {
+    // The page's setting read and preload.settings are one statement: a drift
+    // leaves the first render waiting on a round trip for the care team.
+    const fn = html.slice(html.indexOf("async function loadSettings()"));
+    const posted = fn.match(/await db\(`([^`]+)`/)?.[1];
+    expect(posted, "loadSettings posts no db statement").toBeTruthy();
+    expect(norm(posted)).toBe(norm(manifest.preload.settings.sql));
+  });
+
   it("stays within the hub's caps and reads only this app's tables", () => {
     expect(Object.keys(manifest.preload).length).toBeLessThanOrEqual(6);
     for (const [name, { sql, params = [] }] of Object.entries(manifest.preload)) {

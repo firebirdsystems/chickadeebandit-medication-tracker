@@ -36,10 +36,10 @@ describe("refills", () => {
     // reminder must not widen that to a child with an email address.
     expect(dr).toMatchObject({
       table: "medications", date_column: "refill_on", title_column: "name", owner_column: "member_id",
-      visibility_column: "visibility", everyone_values: ["family"], household_audience: "adults",
+      visibility_column: "visibility", everyone_values: ["family", "care"], household_audience: "adults",
       last_reminded_column: "refill_reminded_at", on_no_recipients: "skip",
     });
-    expect(manifest.row_policies.medications).toMatchObject({ visibility_column: "visibility", adult_values: ["family"] });
+    expect(manifest.row_policies.medications).toMatchObject({ visibility_column: "visibility", adult_values: ["family", "care"] });
     expect(manifest.db_plaintext_columns).toContain("refill_on");
     expect(manifest.required_capabilities).toEqual(expect.arrayContaining(["cron", "email"]));
     // "skip", never "adults": the fallback would email a PRIVATE medication's
@@ -124,9 +124,75 @@ describe("medication UI safety contract", () => {
     expect(source).toContain('window.addEventListener("focus", () => { void refreshOnReturn(); });');
     expect(source).toContain("if (!document.hidden) void refreshOnReturn();");
     expect(source).toContain("refreshInFlight ??= rereadOnReturn().finally(() => { refreshInFlight = null; });");
-    expect(source).toContain("await Promise.allSettled([fetchMedications(), fetchDoses(day)]);");
+    // The groups and the setting are re-read only while the care team is
+    // unknown, so a known one costs no extra reads on every return.
+    const flat = source.replace(/\s+/g, " ");
+    expect(flat).toContain("const rereadGroups = !groupsRead && !!CONTEXT; const rereadSettings = !settingsRead;");
+    expect(flat).toContain("await Promise.allSettled([ fetchMedications(), fetchDoses(day), rereadGroups ? fetchGroups() : null, rereadSettings ? fetchSettings() : null, ]);");
+    // Applied only past the still-current check: a discarded re-read changes nothing.
+    const reread = flat.slice(flat.indexOf("async function rereadOnReturn()"));
+    const check = reread.indexOf("if (!rereadStillCurrent(");
+    expect(check).toBeGreaterThan(0);
+    expect(reread.indexOf("groups = groupsNow.value; groupsRead = true;")).toBeGreaterThan(check);
+    expect(reread.indexOf("applySettings(settingsNow.value)")).toBeGreaterThan(check);
+    // The last good answer stands while a read is out; only a failure clears it.
+    expect(source).toContain("catch (e) { groupsRead = false; throw e; }");
+    expect(source).toContain("catch (e) { settingsRead = false; throw e; }");
+    expect(source.match(/(?<!let )groupsRead = false/g)).toHaveLength(1);
+    expect(source.match(/(?<!let )settingsRead = false/g)).toHaveLength(1);
     // The demo has no hub to re-read from, and its loaders reset what was tried.
     expect(source).toContain("if (!DB) { await loadReminderStatus(); render(); return; }");
+  });
+
+  it("asks for family.members alone at first paint, and the groups beside it", () => {
+    // The hub answers a context read from its preload only when every key was
+    // preloaded, and family.groups is not: asked together, first paint waits.
+    expect(source).toContain("fetch(`${CONTEXT}?keys=family.members`)");
+    expect(source).toContain("fetch(`${CONTEXT}?keys=family.groups`)");
+    expect(source).not.toContain("keys=family.members,family.groups");
+    const flat = source.replace(/\s+/g, " ");
+    expect(flat).toContain("const groupsLoad = loadGroups().catch(e => console.error(e));");
+    expect(flat).toContain("render(); void groupsLoad.then(render); }");
+  });
+
+  it("labels a care medication with no care team set as the adults' alone", () => {
+    expect(source).toContain('careTeamKnown() && !careTeamConfigured() ? "Care team (none set): adults only" : "Care team"');
+    expect(source).toContain('data-testid="care-badge">${careRowLabel()}</span>');
+    expect(source).toContain("<em>${careRowLabel().toLowerCase()}</em>");
+    expect(source).not.toContain("The care team was removed");
+  });
+
+  it("shows a roster participant their own medications alone, whatever else the hub returned", () => {
+    expect(source).toContain("const shown = (rows) => IN_ROSTER && !TENANT.isAdmin");
+    expect(source).toContain("? rows.filter(m => m.member_id === ME?.id)");
+    expect(source).toContain("return { active: shown(active.rows), archived: shown(archived.rows) };");
+  });
+
+  it("reopens the care team after a retry only over itself, never over a form opened meanwhile", () => {
+    // Dismissed meanwhile (no modal open), it stays closed too.
+    expect(source).toContain("if (!asked || modalEl !== asked) return;");
+    expect(source).toContain("window.retryCareTeam = function() { return window.openCareTeamModal(); };");
+  });
+
+  it("reads the groups and the setting afresh every time the care team settings open", () => {
+    // A group made in another hub tab, or another admin's choice, must be in
+    // the select before anyone saves over it — not only after a failed read.
+    const open = source.slice(source.indexOf("window.openCareTeamModal = async function()"), source.indexOf("function drawCareTeamModal()"));
+    expect(open).toContain('data-testid="care-team-checking"');
+    expect(open).toContain("await Promise.allSettled([loadGroups(), loadSettings()]);");
+    expect(open.indexOf("allSettled")).toBeLessThan(open.indexOf("drawCareTeamModal();"));
+    expect(open).toContain("if (!asked || modalEl !== asked) return;");
+  });
+
+  it("closes the care team form after saving only while it is still the open one", () => {
+    expect(source).toContain("if (modalEl === form) closeModal();\n    render();\n    if (!reread)");
+  });
+
+  it("offers no care team in a roster, where it can never see anything", () => {
+    expect(source).toContain("function careTeamSettable() { return TENANT.isAdmin && !!DB && !!ADMIN_CONFIG_URL && !IN_ROSTER; }");
+    expect(source).toContain("const careTeamBtn = careTeamSettable()");
+    expect(source).toContain("careTeamConfigured: !IN_ROSTER && careTeamConfigured(), current });");
+    expect(source).toContain('${IN_ROSTER ? "" : `<div data-testid="care-team-hint"');
   });
 
   it("owes a re-read it could not make, and pays it when the form closes or the write settles", () => {
@@ -179,10 +245,15 @@ describe("medication UI safety contract", () => {
     expect(manifest.member_references.medications).toContainEqual({ column: "remind_member_ids", on_removed: "prune_list" });
   });
 
-  it("names visibility in a write only for the person the medication is for", () => {
-    // The hub guards the column to its adult owner; naming it in anyone
-    // else's statement would change no row or refuse the insert.
-    expect(manifest.row_policies.medications.column_write_acls.visibility).toEqual({ writable_by: ["adult_owner"] });
+  it("names visibility in a write only where the form offered the choice", () => {
+    // The hub takes the column from any adult who sees the row (a parent
+    // marks a child's medication for the care team); the page names it only
+    // where it offered the choice, so another adult's is left to that adult.
+    expect(manifest.row_policies.medications.column_write_acls.visibility).toEqual({ writable_by: ["adult"] });
+    expect(source).toContain("const choosesVisibility = canChooseVisibility(memberId, myMember(), members, TENANT);");
+    expect(source).toContain("const visibility = choosesVisibility && offered.includes(chosen) ? chosen : VISIBILITY_FAMILY;");
+    // The choices are the ones the form was drawn with.
+    expect(source).toContain("const offered = [...(visibilitySelect?.options ?? [])].map(o => o.value);");
     expect(source).toContain('${refillDateChanged ? ", refill_reminded_at=NULL" : ""}${choosesVisibility ? ", visibility=?" : ""}');
     expect(source).toContain('${choosesVisibility ? "visibility, " : ""}archived, created_at)');
     expect(source).not.toMatch(/refill_every_days=\?, visibility=\?/);

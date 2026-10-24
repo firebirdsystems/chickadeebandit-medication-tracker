@@ -40,6 +40,69 @@ describe("manifest.json", () => {
   });
 });
 
+// ── Care team ─────────────────────────────────────────────────────────────────
+// A "care" medication is read by the adults and by the members of the hub
+// group an admin names in care_team_group_id; a nanny who signs in as a guest
+// is a non-adult inside a row policy, so only the privileged group reaches it.
+describe("care team", () => {
+  const meds = manifest.row_policies.medications;
+
+  it("reads a care medication as an adult or as the care team group, select only", () => {
+    expect(meds.adult_values).toEqual(["family", "care"]);
+    expect(meds.privileged_values).toEqual(["care"]);
+    // Never "family": the adults' own prescriptions must not reach the nanny.
+    expect(meds.privileged_values).not.toContain("family");
+    expect(meds.everyone_values).toEqual([]);
+    expect(meds.privileged_groups).toEqual([
+      { settings_table: "settings", settings_key: "care_team_group_id", actions: ["select"] },
+    ]);
+  });
+
+  it("keeps the group pointer admin-written", () => {
+    expect(manifest.row_policies.settings).toEqual({ kind: "app_config" });
+    expect(manifest.admin_config).toEqual({ settings_table: "settings", keys: ["care_team_group_id"] });
+    expect(manifest.data_access.reads).toContain("family.groups");
+    expect(existsSync(join(__dirname, "../migrations/008_care_team.sql"))).toBe(true);
+  });
+
+  it("lets an adult mark a child's medication for the care team", () => {
+    // "adult_owner" would keep a parent from naming the column on the child's row.
+    expect(meds.column_write_acls.visibility).toEqual({ writable_by: ["adult"] });
+    expect(meds.write_visibility_scoped).toBe(true);
+  });
+
+  it("follows doses to the medication, so the care team ticks a care medication's doses", () => {
+    expect(manifest.row_policies.doses).toMatchObject({ kind: "inherit_visibility", parent_table: "medications" });
+    // Nobody rewrites who ticked a dose: in a co-parenting space it decides
+    // whose tick it is. The page only ever INSERTs logged_by.
+    expect(manifest.row_policies.doses.column_write_acls).toEqual({
+      logged_by: { writable_by: [], actions: ["update"] },
+    });
+  });
+
+  it("never re-keys a medication, and a deleted medication takes its doses", () => {
+    // A swapped id would move another medication's doses under a child's.
+    expect(meds.column_write_acls.id).toEqual({ writable_by: [], actions: ["update"] });
+    // Without the cascade a deleted medication's id could be re-inserted under
+    // a child to adopt its orphaned doses (the page archives, never deletes).
+    expect(manifest.delete_cascades).toEqual({ medications: [{ table: "doses", foreign_key: "medication_id" }] });
+  });
+
+  it("lets either co-parent add and maintain a child's medication, never the other parent's", () => {
+    // owner_or_visibility: a steward's INSERT keeps a CHILD owner in a co-parenting
+    // space; one naming the other parent is stamped to the caller.
+    expect(meds.supervisor_assigns_owner).toBe(true);
+    expect(meds.coparenting_child_supervision).toBe(true);
+    // inherit_visibility: either parent undoes the other's tick on a child's medication.
+    expect(manifest.row_policies.doses.adults_bypass).toBe(true);
+    expect(manifest.row_policies.doses.coparenting_child_supervision).toBe(true);
+  });
+
+  it("reminds the adults of a care medication's refill as of a shared one", () => {
+    expect(manifest.date_reminders.everyone_values).toEqual(["family", "care"]);
+  });
+});
+
 // ── ai_access SQL file validation ─────────────────────────────────────────────
 // Auto-discovers all db_exports/db_mutations/db_inserts/db_deletes entries and
 // validates each SQL file for statement type and single-statement (no semicolons,
