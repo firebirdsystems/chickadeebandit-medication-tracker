@@ -641,6 +641,9 @@ async function loadReminderStatus() {
     };
     return;
   }
+  // The hub refuses a guest this status (it notifies no guest), so a nanny on
+  // the care team is not sent to ask for it on every load.
+  if (ME?.role === "guest") { reminderStatus = null; return; }
   try {
     const res = await fetch(REMINDER_STATUS, { headers: { Accept: "application/json" } });
     const body = res.ok ? await res.json() : null;

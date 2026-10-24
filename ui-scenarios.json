@@ -553,6 +553,172 @@
           "as": "kid"
         }
       ]
+    },
+    {
+      "name": "until an admin chooses a care team the form offers no care-team choice and says how to set one",
+      "members": {
+        "owner": "admin"
+      },
+      "steps": [
+        {
+          "action": "open",
+          "as": "owner"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "owner"
+        },
+        {
+          "action": "click",
+          "selector": "button:has-text(\"+ Add Medication\")",
+          "as": "owner"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"f-visibility\"]",
+          "as": "owner"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"f-visibility\"] option[value=\"care\"]",
+          "count": 0,
+          "as": "owner"
+        },
+        {
+          "action": "expectText",
+          "selector": "[data-testid=\"care-team-hint\"]",
+          "text": "No care team yet",
+          "as": "owner"
+        }
+      ]
+    },
+    {
+      "name": "once a care team is chosen the form offers it and leaves guests out of the reminder lists; a nanny on the care team sees and ticks only the care medication and gets no add, edit or manage controls",
+      "members": {
+        "owner": "admin",
+        "nanny": "guest"
+      },
+      "steps": [
+        {
+          "action": "seedGroup",
+          "group": "care",
+          "name": "Sitters",
+          "members": [
+            "nanny"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__settings (key, value) VALUES ('care_team_group_id', ?)",
+          "params": [
+            "{{group:care}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_medication_tracker__medications (id, member_id, name, dosage, reminder_times, reminders_on, archived, visibility, created_at) VALUES ('ui-care', ?, ?, ?, ?, 0, 0, 'care', '2026-01-01T00:00:00Z'), ('ui-fam', ?, ?, ?, ?, 0, 0, 'family', '2026-01-01T00:00:01Z')",
+          "params": [
+            "{{owner}}",
+            "EpiPen",
+            "0.3mg",
+            "[\"08:00\"]",
+            "{{owner}}",
+            "Lisinopril",
+            "20mg",
+            "[\"08:00\"]"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "owner"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-care\"] [data-testid=\"care-badge\"]",
+          "as": "owner"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "as": "owner"
+        },
+        {
+          "action": "expectText",
+          "selector": "[data-testid=\"care-team-settings\"]",
+          "text": "Sitters",
+          "as": "owner"
+        },
+        {
+          "action": "click",
+          "selector": "button:has-text(\"+ Add Medication\")",
+          "as": "owner"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"f-visibility\"] option[value=\"care\"]",
+          "count": 1,
+          "as": "owner"
+        },
+        {
+          "action": "expectText",
+          "selector": "[data-testid=\"care-team-hint\"]",
+          "text": "Sitters",
+          "as": "owner"
+        },
+        {
+          "action": "expectCount",
+          "selector": ".f-remind-member",
+          "count": 1,
+          "as": "owner"
+        },
+        {
+          "action": "open",
+          "as": "nanny"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-care\"]",
+          "as": "nanny"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"med-row\"][data-med-id=\"ui-fam\"]",
+          "count": 0,
+          "as": "nanny"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"edit-med\"]",
+          "count": 0,
+          "as": "nanny"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"tab-manage\"]",
+          "count": 0,
+          "as": "nanny"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-care\"][data-slot=\"08:00\"]",
+          "as": "nanny"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-care\"][data-slot=\"08:00\"][data-taken=\"yes\"]",
+          "as": "nanny"
+        },
+        {
+          "action": "reload",
+          "as": "nanny"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"dose-pill\"][data-med-id=\"ui-care\"][data-slot=\"08:00\"][data-taken=\"yes\"]",
+          "as": "nanny"
+        }
+      ]
     }
   ]
 }
