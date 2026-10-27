@@ -42,4 +42,10 @@ describe("failureLine", () => {
     expect(failureLine(err({ status: 500 }, "D1_ERROR: boom"), words)).not.toMatch(/D1_ERROR/);
     expect(failureLine(new TypeError("Failed to fetch"), words)).not.toMatch(/Failed to fetch/);
   });
+  it("a failed re-read wins over a status, and no re-read with no status asks for a retry", () => {
+    expect(failureLine(err({ status: 409 }), { ...words, found: null })).toBe("Couldn’t save the medication — try again.");
+    expect(failureLine(err({ status: 500 }), { ...words, found: undefined })).toBe("Couldn’t save the medication — try again.");
+    // A guarded write whose row is still there was changed, even if the hub also said 404.
+    expect(failureLine(err({ status: 404 }), { ...words, found: true, guarded: true })).toBe("This medication was changed by someone else — check it first.");
+  });
 });

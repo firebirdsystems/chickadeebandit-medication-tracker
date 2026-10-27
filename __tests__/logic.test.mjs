@@ -16,6 +16,7 @@ import {
   isDueOn, showsToday,
   daysBefore, reportRange, reportUrl,
   isIsoDate, nextRefillOn, refillStatus, refillLine, REFILL_SOON_DAYS,
+  timeOfDayLabel, esc, isAdult, isCareMedication,
 } from "../src/logic.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -772,5 +773,256 @@ describe("care team", () => {
     // reminder or a missed-dose alert: the hub notifies no guest, and the
     // form's Remind and Missed-dose lists leave guests out (memberChecksHtml).
     expect(recipientsForVisibility(["adult-1", "adult-2"], VISIBILITY_CARE, "kid-1")).toEqual(["adult-1", "adult-2"]);
+  });
+});
+
+// ── Edge cases pinned by mutation testing (npm run mutation) ─────────────────
+
+describe("normalizeDaysMask bounds", () => {
+  it("keeps Monday (1) and Sunday (7), drops 0 and 8", () => {
+    expect(normalizeDaysMask([7, 1])).toBe("1,7");
+    expect(normalizeDaysMask(["7"])).toBe("7");
+    expect(normalizeDaysMask([0, 8, -1])).toBe("");
+  });
+
+  it("drops non-integer days and de-duplicates the rest", () => {
+    expect(normalizeDaysMask([1.5, 2, "2", 2.0, 6.9])).toBe("2");
+    expect(normalizeDaysMask([3, 3, 3])).toBe("3");
+  });
+
+  it("reads a missing selection as every day", () => {
+    expect(normalizeDaysMask(null)).toBe("");
+    expect(normalizeDaysMask(undefined)).toBe("");
+  });
+});
+
+describe("isDueOn every-N-days", () => {
+  // 2026-10-12 is a Monday.
+  const start = "2026-10-12";
+
+  it("tells every 3 days apart from daily", () => {
+    const everyThird = { every_n_days: 3, started_on: start };
+    expect([12, 13, 14, 15, 16, 17, 18].map(d => isDueOn(everyThird, `2026-10-${d}`)))
+      .toEqual([true, false, false, true, false, false, true]);
+    const daily = { every_n_days: 1, started_on: start };
+    expect([12, 13, 14].map(d => isDueOn(daily, `2026-10-${d}`))).toEqual([true, true, true]);
+  });
+
+  it("every 2 days skips alternate days", () => {
+    const everyOther = { every_n_days: 2, started_on: start };
+    expect([12, 13, 14, 15].map(d => isDueOn(everyOther, `2026-10-${d}`)))
+      .toEqual([true, false, true, false]);
+    expect(isDueOn({ every_n_days: "2", started_on: start }, "2026-10-13")).toBe(false);
+  });
+
+  it("ignores an interval of 0, a negative one, or a non-integer one", () => {
+    expect(isDueOn({ every_n_days: 0, started_on: start }, "2026-10-13")).toBe(true);
+    expect(isDueOn({ every_n_days: -2, started_on: start }, "2026-10-13")).toBe(true);
+    expect(isDueOn({ every_n_days: 2.5, started_on: start }, "2026-10-13")).toBe(true);
+    expect(isDueOn({ every_n_days: "abc", started_on: start }, "2026-10-13")).toBe(true);
+  });
+
+  it("ignores an interval with no start date, missing or null", () => {
+    expect(isDueOn({ every_n_days: 3 }, "2026-10-13")).toBe(true);
+    expect(isDueOn({ every_n_days: 3, started_on: null }, "2026-10-13")).toBe(true);
+  });
+
+  it("combines an interval with a weekday mask: both must hold", () => {
+    // Every other day from Monday lands on Mon, Wed, Fri, Sun; mask keeps Mon/Tue.
+    const med = { every_n_days: 2, started_on: start, days_mask: "1,2" };
+    expect(isDueOn(med, "2026-10-12")).toBe(true);   // Mon, interval day
+    expect(isDueOn(med, "2026-10-13")).toBe(false);  // Tue, off-interval
+    expect(isDueOn(med, "2026-10-14")).toBe(false);  // Wed, not in mask
+  });
+});
+
+describe("isDueOn course dates and weekdays", () => {
+  it("treats a missing medication as unrestricted", () => {
+    expect(isDueOn(null, "2026-10-12")).toBe(true);
+    expect(isDueOn(undefined, "2026-10-12")).toBe(true);
+  });
+
+  it("is due on the start day and the end day themselves", () => {
+    expect(isDueOn({ started_on: "2026-10-12" }, "2026-10-12")).toBe(true);
+    expect(isDueOn({ started_on: "2026-10-13" }, "2026-10-12")).toBe(false);
+    expect(isDueOn({ ends_on: "2026-10-12" }, "2026-10-12")).toBe(true);
+    expect(isDueOn({ ends_on: "2026-10-11" }, "2026-10-12")).toBe(false);
+    expect(isDueOn({ started_on: null, ends_on: null }, "2026-10-12")).toBe(true);
+  });
+
+  it("maps every ISO weekday, Monday 1 through Sunday 7", () => {
+    // 2026-10-12 (Mon) .. 2026-10-18 (Sun)
+    for (let iso = 1; iso <= 7; iso++) {
+      const date = `2026-10-${11 + iso}`;
+      expect(isDueOn({ days_mask: String(iso) }, date)).toBe(true);
+      expect(isDueOn({ days_mask: String((iso % 7) + 1) }, date)).toBe(false);
+    }
+  });
+
+  it("ignores a zero in the mask and reads a null mask as every day", () => {
+    expect(isDueOn({ days_mask: "0" }, "2026-10-13")).toBe(true);
+    expect(isDueOn({ days_mask: null }, "2026-10-13")).toBe(true);
+  });
+
+  it("is not due on a date it cannot read when weekdays are set", () => {
+    // 4 is the weekday an unreadable date would fall back to (1970-01-01).
+    expect(isDueOn({ days_mask: "4" }, "not-a-date")).toBe(false);
+    expect(isDueOn({ days_mask: "1" }, "x2026-10-12")).toBe(false);
+    expect(isDueOn({ days_mask: "1" }, "2026-10-12x")).toBe(false);
+  });
+});
+
+describe("medicationTimes and reminders edge cases", () => {
+  it("reads a missing medication as no schedule", () => {
+    expect(medicationTimes(null)).toEqual([]);
+    expect(medicationTimes(undefined)).toEqual([]);
+  });
+
+  it("falls back to legacy slots when reminder_times is empty or invalid", () => {
+    expect(medicationTimes({ reminder_times: "[]", schedule_slots: '["bedtime"]' })).toEqual(["21:00"]);
+    expect(medicationTimes({ reminder_times: '["nope"]', schedule_slots: ["afternoon"] })).toEqual(["13:00"]);
+    expect(medicationTimes({ schedule_slots: '["noon","morning"]' })).toEqual(["08:00"]);
+  });
+
+  it("treats a missing or null reminders_on as on, and any zero as off", () => {
+    expect(remindersEnabled(null)).toBe(true);
+    expect(remindersEnabled({ reminders_on: null })).toBe(true);
+    expect(remindersEnabled({ reminders_on: "0" })).toBe(false);
+    expect(remindersEnabled({ reminders_on: 0 })).toBe(false);
+    expect(remindersEnabled({ reminders_on: "1" })).toBe(true);
+  });
+
+  it("reads a missing medication as neither care nor private", () => {
+    expect(isCareMedication(null)).toBe(false);
+    expect(isPrivateMedication(null)).toBe(false);
+  });
+});
+
+describe("clock-time edge cases", () => {
+  it("anchors the clock pattern and only accepts strings", () => {
+    expect(isClockTime("x08:00")).toBe(false);
+    expect(isClockTime("08:001")).toBe(false);
+    expect(isClockTime(["08:00"])).toBe(false);
+  });
+
+  it("returns what it was given when it is not a clock time", () => {
+    expect(formatTime("nope")).toBe("nope");
+    expect(formatTime(null)).toBe("");
+    expect(formatTime(undefined)).toBe("");
+  });
+
+  it("labels the time of day at each boundary", () => {
+    expect(timeOfDayLabel("00:00")).toBe("Morning");
+    expect(timeOfDayLabel("11:59")).toBe("Morning");
+    expect(timeOfDayLabel("12:00")).toBe("Afternoon");
+    expect(timeOfDayLabel("16:59")).toBe("Afternoon");
+    expect(timeOfDayLabel("17:00")).toBe("Evening");
+    expect(timeOfDayLabel("20:59")).toBe("Evening");
+    expect(timeOfDayLabel("21:00")).toBe("Bedtime");
+    expect(timeOfDayLabel("8:00")).toBe("");
+  });
+
+  it("keeps exactly the first MAX_TIMES times, in order", () => {
+    const many = Array.from({ length: 40 }, (_, i) => `00:${String(i).padStart(2, "0")}`);
+    expect(normalizeTimes(many)).toEqual(many.slice(0, MAX_TIMES));
+  });
+
+  it("lists the four legacy slots in order", () => {
+    expect(ALL_SLOTS).toEqual(["morning", "afternoon", "evening", "bedtime"]);
+  });
+});
+
+describe("recipient lists edge cases", () => {
+  it("drops non-string and blank member ids", () => {
+    expect(normalizeMemberIds([5, null, " ", "a"])).toBe('["a"]');
+    expect(normalizeMemberIds(null)).toBe("[]");
+  });
+
+  it("filters recipients to non-empty strings", () => {
+    expect(recipientsForVisibility([5, "", null, "a"], "family", "kid-1")).toEqual(["a"]);
+    expect(recipientsForVisibility(null, "family", "kid-1")).toEqual([]);
+  });
+});
+
+describe("gates edge cases", () => {
+  const adult = { id: "adult-1", role: "adult" };
+  const roster = { tenantKind: "space", spaceKind: "roster" };
+  const general = { tenantKind: "space", spaceKind: "general" };
+  const copar = { tenantKind: "space", spaceKind: "coparenting" };
+
+  it("defaults isAdmin to false outside a household", () => {
+    expect(managesMedications(adult, roster)).toBe(false);
+    expect(canAssignOwner(adult, general)).toBe(false);
+  });
+
+  it("lets every adult at home manage whatever spaceKind says", () => {
+    expect(managesMedications(adult, { tenantKind: "household", spaceKind: "roster" })).toBe(true);
+  });
+
+  it("canChooseVisibility in a co-parenting space: children only", () => {
+    const members = [null, adult, { id: "kid-1", role: "child" }, { id: "guest-1", role: "guest" }];
+    expect(canChooseVisibility("kid-1", adult, members, copar)).toBe(true);
+    expect(canChooseVisibility("guest-1", adult, members, copar)).toBe(false);
+    expect(canChooseVisibility("ghost", adult, members, copar)).toBe(false);
+    expect(canChooseVisibility("guest-1", adult, members, general)).toBe(true);
+    expect(canChooseVisibility("guest-1", adult, members, {})).toBe(true);
+    // A household is never a co-parenting space, whatever spaceKind says.
+    expect(canChooseVisibility("guest-1", adult, members, { tenantKind: "household", spaceKind: "coparenting" })).toBe(true);
+    expect(canChooseVisibility("adult-2", adult, [...members, { id: "adult-2", role: "adult" }], {})).toBe(false);
+  });
+
+  it("offers Only me on the chooser's own medication alone", () => {
+    expect(visibilityOptions("adult-1", null)).toEqual(["family"]);
+    expect(visibilityOptions("kid-1", adult)).toEqual(["family"]);
+    expect(visibilityOptions("adult-1", adult)).toEqual(["family", "private"]);
+    expect(visibilityOptions("", adult)).toEqual(["family"]);
+  });
+
+  it("nobody signed in views nothing", () => {
+    expect(canViewMedication(med(), null, MEMBERS)).toBe(false);
+  });
+
+  it("in a co-parenting space an unknown owner's medication is not editable", () => {
+    const space = { ...copar, isAdmin: true };
+    expect(canEditMedication(med({ member_id: "ghost" }), adult, MEMBERS, space)).toBe(false);
+    expect(canEditMedication(med({ member_id: "kid-1" }), adult, MEMBERS, space)).toBe(true);
+  });
+
+  it("re-exports isAdult and esc from shared.js", () => {
+    expect(isAdult({ role: "adult" })).toBe(true);
+    expect(isAdult({ role: "admin" })).toBe(true);
+    expect(isAdult({ role: "child" })).toBe(false);
+    expect(isAdult(null)).toBe(false);
+    expect(esc(`<a href="x">Tom & Jerry's</a>`)).toBe("&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/a&gt;");
+  });
+
+  it("memberColor and initial are stable values", () => {
+    expect(memberColor("adult-1")).toBe("#65a30d");
+    expect(memberColor("kid-1")).toBe("#059669");
+    expect(initial("  bob")).toBe("B");
+  });
+});
+
+describe("dates edge cases", () => {
+  it("slotFromDoseKey answers empty when the date is not in the key", () => {
+    expect(slotFromDoseKey("m1__2026-06-02__08:00", "2026-06-01")).toBe("");
+  });
+
+  it("refillStatus is null for a missing medication, an impossible date or an unreadable today", () => {
+    expect(refillStatus(null, "2026-10-12")).toBe(null);
+    expect(refillStatus({ refill_on: "2026-02-30" }, "2026-02-01")).toBe(null);
+    expect(refillStatus({ refill_on: "2026-10-12" }, "bogus")).toBe(null);
+  });
+
+  it("isIsoDate and daysBefore anchor the pattern", () => {
+    expect(isIsoDate("x2026-10-12")).toBe(false);
+    expect(isIsoDate("2026-10-12x")).toBe(false);
+    expect(daysBefore("x2026-10-12", 0)).toBe("");
+    expect(daysBefore("2026-10-12x", 0)).toBe("");
+  });
+
+  it("nextRefillOn accepts a full-year interval", () => {
+    expect(nextRefillOn("2026-01-01", 366)).toBe("2027-01-02");
+    expect(nextRefillOn("2026-01-01", 367)).toBe("");
   });
 });
